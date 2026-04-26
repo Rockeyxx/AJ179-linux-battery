@@ -50,23 +50,52 @@ Product ID = 5c2f
 (Note: Keep the 0x in front of the numbers it is hexadecimal).
 
 # Installation:
+
+You can install the daemon either automatically using the provided script, or manually.
+
+## Automatic Installation
+
+1. Make the installation script executable:
+```Bash
+chmod +x install.sh
+```
+
+2. Run the installation script (requires root and the mouse to be awake):
+```Bash
+sudo ./install.sh
+```
+The script will automatically detect your package manager (pacman or apt), install dependencies, compile the code via `make`, set up permissions, and configure the systemd service. It will also automatically use the `VENDOR_ID` and `PRODUCT_ID` configured in `ajazz_daemon.c`.
+
+*(Note: If the daemon fails to read battery status immediately after installation, physically unplug and re-plug the mouse dongle to force the kernel to evaluate the new udev rules).*
+
+## Uninstallation
+
+If you wish to remove the daemon, you can use the provided uninstallation script:
+```Bash
+chmod +x uninstall.sh
+sudo ./uninstall.sh
+```
+This will safely stop the service, remove the binary, and clean up the systemd and udev rules.
+
+## Manual Installation
+
 1. Install Dependencies
-You need libusb and gcc to compile the code.
+You need `libusb`, `gcc`, and `make` to compile the code.
 
 Arch:
 ```Bash
-sudo pacman -S libusb gcc
+sudo pacman -S libusb gcc make
 ```
 
 Debian:
 ```Bash
-sudo apt install libusb-1.0-0-dev gcc
+sudo apt install libusb-1.0-0-dev gcc make
 ```
 
-2. Compile & install the code ajazz_daemon.c:
+2. Compile & install the code:
 ```Bash
-gcc ajazz_daemon.c -o ajazz_daemon -lusb-1.0
-sudo mv ajazz_daemon /usr/local/bin/
+make
+sudo make install
 ```
 
 3. Setup Permissions (udev rule)
@@ -87,7 +116,6 @@ Paste the following configuration:
 ```Ini, TOML
 [Unit]
 Description=Ajazz Mouse Battery Daemon
-After=network.target
 
 [Service]
 Type=simple
