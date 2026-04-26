@@ -20,8 +20,13 @@ else
 fi
 
 echo "Compiling ajazz_daemon using make..."
-make clean
-make
+if [ -n "$SUDO_USER" ]; then
+    sudo -u "$SUDO_USER" make clean
+    sudo -u "$SUDO_USER" make
+else
+    make clean
+    make
+fi
 
 echo "Installing static files using make install..."
 make install
