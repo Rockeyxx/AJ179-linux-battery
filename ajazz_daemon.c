@@ -1,12 +1,11 @@
 #include <libusb-1.0/libusb.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define VENDOR_ID 0x249a
-#define PRODUCT_ID 0x5c2f
 #define INTERFACE_NUM 2
 #define ENDPOINT_IN 0x84
 #define OUTPUT_FILE "/tmp/ajazz_battery"
@@ -24,9 +23,19 @@ int perform_handshake(libusb_device_handle *handle);
 
 void handle_sig(int sig) { running = 0; }
 
-int main() {
+int main(int argc, char *argv[]) {
   signal(SIGINT, handle_sig);
   signal(SIGTERM, handle_sig);
+
+  uint16_t vendor_id = 0x249a;
+  uint16_t product_id = 0x5c2f;
+
+  if (argc >= 3) {
+    vendor_id = (uint16_t)strtol(argv[1], NULL, 16);
+    product_id = (uint16_t)strtol(argv[2], NULL, 16);
+  } else {
+    printf("No IDs provided, defaulting to Vendor: %04x, Product: %04x\n", vendor_id, product_id);
+  }
 
   if (libusb_init(&ctx) < 0)
     return 1;
@@ -38,7 +47,7 @@ int main() {
     // 1. Try to open device
     // If mouse is sleeping (5s rule), this returns NULL immediately.
     libusb_device_handle *handle =
-        libusb_open_device_with_vid_pid(ctx, VENDOR_ID, PRODUCT_ID);
+        libusb_open_device_with_vid_pid(ctx, vendor_id, product_id);
 
     if (handle) {
       // DEVICE FOUND (Mouse is awake!)

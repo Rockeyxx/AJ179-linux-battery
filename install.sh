@@ -31,25 +31,17 @@ fi
 echo "Installing static files using make install..."
 make install
 
-echo "Setting up dynamically generated udev rules..."
-# Extract IDs from the C file
-
 echo "Please click and move your mouse now to wake it up."
 read -p "Press [Enter] once your mouse is awake..."
 
-VENDOR_ID=$(awk '/#define VENDOR_ID/ {print $3}' ajazz_daemon.c | sed 's/0x//' | head -n 1)
-PRODUCT_ID=$(awk '/#define PRODUCT_ID/ {print $3}' ajazz_daemon.c | sed 's/0x//' | head -n 1)
-
-if [ -z "$VENDOR_ID" ]; then
-    VENDOR_ID="249a"
+read -p "Do you want to configure custom mouse IDs? (Default is Ajazz AJ179: 249a/5c2f) [y/N]: " config_choice
+if [[ "$config_choice" =~ ^[Yy]$ ]]; then
+    read -p "Enter Vendor ID (e.g. 249a): " VENDOR_ID
+    read -p "Enter Product ID (e.g. 5c2f): " PRODUCT_ID
+    echo "VENDOR_ID=$VENDOR_ID" > /etc/conf.d/ajazz-battery
+    echo "PRODUCT_ID=$PRODUCT_ID" >> /etc/conf.d/ajazz-battery
+    echo "Configuration saved to /etc/conf.d/ajazz-battery."
 fi
-if [ -z "$PRODUCT_ID" ]; then
-    PRODUCT_ID="5c2f"
-fi
-
-echo "Using Vendor ID: $VENDOR_ID, Product ID: $PRODUCT_ID"
-
-echo "SUBSYSTEM==\"usb\", ATTR{idVendor}==\"$VENDOR_ID\", ATTR{idProduct}==\"$PRODUCT_ID\", MODE=\"0666\"" > /etc/udev/rules.d/99-ajazz.rules
 
 echo "Executing state changes..."
 udevadm control --reload-rules && udevadm trigger

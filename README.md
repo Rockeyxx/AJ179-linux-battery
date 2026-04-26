@@ -10,10 +10,10 @@ The official Ajazz driver is Windows-only. This Linux alternative:
 
 * **JSON Output**: Directly formatted for Waybar.
 
-# How to check your Mouse IDs (Important)
-This code is configured for VENDOR_ID = **0x249a** and PRODUCT_ID = **0x5c2f**. 
+# How to check your Mouse IDs
+This daemon defaults to the **Ajazz AJ179** IDs (`VENDOR_ID = 249a`, `PRODUCT_ID = 5c2f`).
 
-If you have a different Ajazz model, you need to check your IDs and update the code.
+If you have a different Ajazz model, you should check your IDs so you can provide them during installation.
 
 To check the ids you need first to have usbutils: 
 
@@ -42,16 +42,20 @@ The format is ID [VENDOR]:[PRODUCT].
 Vendor ID = 249a
 Product ID = 5c2f
 
-3. Update the C code: If your IDs are different, open ajazz_daemon.c and edit these lines at the top:
-```C
-#define VENDOR_ID  0x249a // Change to your Vendor ID
-#define PRODUCT_ID 0x5c2f // Change to your Product ID
+3. The installer will ask you for these IDs. If you are installing manually or via AUR, simply edit `/etc/conf.d/ajazz-battery` after installation to set your IDs.
+
+# Installation
+
+You can install the daemon either via the Arch User Repository (AUR), automatically using the provided script, or manually.
+
+## AUR Installation (Arch Linux)
+
+If you are using Arch Linux, you can install the package directly from the AUR using your preferred helper:
+
+```Bash
+yay -S aj179-linux-battery-git
 ```
-(Note: Keep the 0x in front of the numbers it is hexadecimal).
-
-# Installation:
-
-You can install the daemon either automatically using the provided script, or manually.
+*(If your mouse is not the AJ179, simply edit `/etc/conf.d/ajazz-battery` after installation and restart the service `ajazz-mouse.service`).*
 
 ## Automatic Installation
 
@@ -64,7 +68,7 @@ chmod +x install.sh
 ```Bash
 sudo ./install.sh
 ```
-The script will automatically detect your package manager (pacman or apt), install dependencies, compile the code via `make`, set up permissions, and configure the systemd service. It will also automatically use the `VENDOR_ID` and `PRODUCT_ID` configured in `ajazz_daemon.c`.
+The script will automatically detect your package manager (pacman or apt), install dependencies, compile the code via `make`, set up permissions, and configure the systemd service. It will also interactively ask if you want to configure custom mouse IDs.
 
 *(Note: If the daemon fails to read battery status immediately after installation, physically unplug and re-plug the mouse dongle to force the kernel to evaluate the new udev rules).*
 
@@ -98,35 +102,16 @@ make
 sudo make install
 ```
 
-3. Setup Permissions (udev rule)
+3. Setup Configuration
  
-Create a rule so the daemon can access the USB device without needing sudo. (Change 249a and 5c2f below, if your ids are different).
+The `Makefile` will automatically install a universal `udev` rule for Ajazz devices. However, you should update the configuration file if your IDs are different from the AJ179:
 
 ```Bash
-echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="249a", ATTR{idProduct}=="5c2f", MODE="0666"' | sudo tee /etc/udev/rules.d/99-ajazz.rules
-sudo udevadm control --reload-rules && sudo udevadm trigger
+sudo nano /etc/conf.d/ajazz-battery
 ```
+
 4. Enable the Daemon (Auto-start)
-Create a systemd service file (nano or any editor):
-
-```Bash
-sudo nano /etc/systemd/system/ajazz-mouse.service
-```
-Paste the following configuration:
-```Ini, TOML
-[Unit]
-Description=Ajazz Mouse Battery Daemon
-
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/ajazz_daemon
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-Start and enable the service:
+Start and enable the installed service:
 
 ```Bash
 sudo systemctl enable --now ajazz-mouse.service
