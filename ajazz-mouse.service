@@ -4,7 +4,7 @@ Description=Ajazz Mouse Battery Daemon
 [Service]
 Type=simple
 EnvironmentFile=-/etc/conf.d/ajazz-battery
-ExecStart=/usr/local/bin/ajazz_daemon $VENDOR_ID $PRODUCT_ID
+ExecStart=/usr/bin/ajazz_daemon $VENDOR_ID $PRODUCT_ID
 Restart=always
 RestartSec=5
 

@@ -4,7 +4,7 @@ LDLIBS += -lusb-1.0
 TARGET = ajazz_daemon
 SRC = ajazz_daemon.c
 
-PREFIX ?= /usr/local
+PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
 SYSTEMD_DIR ?= /etc/systemd/system
 SYSCONFDIR ?= /etc
