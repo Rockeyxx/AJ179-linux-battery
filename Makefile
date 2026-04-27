@@ -1,6 +1,6 @@
 CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2
-LDFLAGS ?= -lusb-1.0
+LDLIBS += -lusb-1.0
 TARGET = ajazz_daemon
 SRC = ajazz_daemon.c
 
@@ -13,7 +13,7 @@ UDEV_DIR ?= /etc/udev/rules.d
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@ $(LDLIBS)
 
 install: $(TARGET)
 	install -D -m 755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
