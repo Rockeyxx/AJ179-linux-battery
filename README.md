@@ -1,16 +1,33 @@
 # AJ179-linux-battery
-A lightweight, efficient C daemon to read the battery percentage of Ajazz wireless mice on Linux. It runs in the background and writes the battery status to a local file, making it perfect for custom status bars like Waybar, Polybar, or Eww.  Tested on: AJ179
+A lightweight, high-efficiency C daemon designed to interface with **Ajazz wireless mice** on Linux. It retrieves battery telemetry via `libusb` and writes the state to a local buffer, facilitating integration with status bars like **Waybar**, **Polybar**, or **Eww**.
 
-# Why use this?
+---
+
+## Table of Contents
+* [Features](#features)
+* [Finding Mouse IDs](#how-to-check-your-mouse-ids)
+* [Installation](#installation)
+    * [AUR (Arch Linux)](#aur-installation-arch-linux)
+    * [Automatic Installation](#automatic-installation)
+    * [Manual Installation](#manual-installation)
+* [Waybar Integration](#waybar-integration)
+* [Technical Notes & Credits](#technical-notes--credits)
+
+---
+
+## Features
 The official Ajazz driver is Windows-only. This Linux alternative:
 
 * **Respects Sleep Mode**: Unlike simple scripts, this daemon detects when your mouse goes to sleep and intelligently pauses, preventing USB crashes.
 
-* **Ultra-Low Resource Usage**: Uses 0.0% CPU. It utilizes an event-driven sleep loop and only talks to the mouse when it's actively moving.
+* **Ultra Low Resource Usage**: Uses 0.0% CPU. It utilizes an event-driven sleep loop and only talks to the mouse when it's actively moving.
 
 * **JSON Output**: Directly formatted for Waybar.
 
-# How to check your Mouse IDs
+---
+
+## How to Check Your Mouse IDs
+
 This daemon defaults to the **Ajazz AJ179** IDs (`VENDOR_ID = 249a`, `PRODUCT_ID = 5c2f`).
 
 If you have a different Ajazz model, you should check your IDs so you can provide them during installation.
@@ -37,70 +54,57 @@ lsusb
 ```
 3. Look for the new device appeared and take the ID for me was:
 
-Bus 001 Device 002: ID 249a:5c2f XCTECH Wireless-Receiver
+Bus 001 Device 002: ID **249a:5c2f** XCTECH Wireless-Receiver
+
 The format is ID [VENDOR]:[PRODUCT].
 Vendor ID = 249a
 Product ID = 5c2f
 
-3. The installer will ask you for these IDs. If you are installing manually or via AUR, simply edit `/etc/conf.d/ajazz-battery` after installation to set your IDs.
+ The installer will ask you for these IDs. If you are installing manually or via AUR, simply edit `/etc/conf.d/ajazz-battery` after installation to set your IDs.
+ 
+---
 
-# Installation
+## Installation
 
-You can install the daemon either via the Arch User Repository (AUR), automatically using the provided script, or manually.
+### AUR Installation (Arch Linux)
+you can use AUR. Or the auto installtion if preferred. 
 
-## AUR Installation (Arch Linux)
-
-If you are using Arch Linux, you can install the package directly from the AUR using your preferred helper:
-
-```Bash
+```bash
 yay -S aj179-linux-battery-git
 ```
-*(If your mouse is not the AJ179, simply edit `/etc/conf.d/ajazz-battery` after installation and restart the service `ajazz-mouse.service`).*
 
-## Automatic Installation
+### Automatic Installation
+The included `install.sh` script automates dependency installation, compilation via `make`, and `systemd` service initialization. It will also interactively ask if you want to configure custom mouse IDs.
 
-1. Make the installation script executable:
-```Bash
-chmod +x install.sh
-```
+1.  Grant execution permissions:
+    ```bash
+    chmod +x install.sh
+    ```
+2.  Execute with elevated privileges (requires mouse movment):
+    ```bash
+    sudo ./install.sh
+    ```
+*Note: If the daemon fails to read battery state immediately after installation, physically unplug and replug the USB dongle to trigger the new `udev` rules.*
 
-2. Run the installation script (requires root and the mouse to be awake):
-```Bash
-sudo ./install.sh
-```
-The script will automatically detect your package manager (pacman or apt), install dependencies, compile the code via `make`, set up permissions, and configure the systemd service. It will also interactively ask if you want to configure custom mouse IDs.
+---
+### Manual Installation
+For users preferring manual deployment or packaging:
 
-*(Note: If the daemon fails to read battery status immediately after installation, physically unplug and re-plug the mouse dongle to force the kernel to evaluate the new udev rules).*
-
-## Uninstallation
-
-If you wish to remove the daemon, you can use the provided uninstallation script:
-```Bash
-chmod +x uninstall.sh
-sudo ./uninstall.sh
-```
-This will safely stop the service, remove the binary, and clean up the systemd and udev rules.
-
-## Manual Installation
-
-1. Install Dependencies
-You need `libusb`, `gcc`, and `make` to compile the code.
+1.  **Install Dependencies:**
 
 Arch:
 ```Bash
 sudo pacman -S libusb gcc make
 ```
-
 Debian:
 ```Bash
 sudo apt install libusb-1.0-0-dev gcc make
 ```
-
-2. Compile & install the code:
-```Bash
-make
-sudo make install
-```
+2.  **Compile & Deploy:**
+    ```bash
+    make
+    sudo make install
+    ```
 
 3. Setup Configuration
  
@@ -109,7 +113,6 @@ The `Makefile` will automatically install a universal `udev` rule for Ajazz devi
 ```Bash
 sudo nano /etc/conf.d/ajazz-battery
 ```
-
 4. Enable the Daemon (Auto-start)
 Start and enable the installed service:
 
@@ -117,7 +120,10 @@ Start and enable the installed service:
 sudo systemctl enable --now ajazz-mouse.service
 ```
 
-# Waybar Integration
+---
+
+## Waybar Integration
+
 The daemon automatically writes the battery status to /tmp/ajazz_battery. 
 
 Add this module to your **~/.config/waybar/config**:
@@ -132,7 +138,22 @@ in your("modules-right": [ here ]) or ("modules-left": [ here ]) add "custom/aja
     "tooltip": true
 }
 ```
-------------------------------------
-# final notes
-the bytes.txt can be used for different things i just do it for the battery if you can do a whole app with it you are free to use as you like. and this bytes are when you first start the ajazz app in windows 
-if this code didnt work for you mostly the byte codes not for your model I reverse engineered it using wire shark try searching on the topic if you want to. I cant explain it here
+---
+
+## Technical Notes & Credits
+
+### Reverse Engineering
+The control bytes used in this daemon were identified via **USB traffic analysis (Wireshark)**. The implementation mimics the initial handshake and status request sent by the Windows driver to the ajaz 179 app.
+
+### Disclaimer
+* **Experimental:** This utility is an independent implementation and is not affiliated with Ajazz.
+* **Bus Permissions:** The installer deploys a `udev` rule to `/etc/udev/rules.d/` to allow unprivileged access to the mouse's USB interface.
+
+### Contributions
+The `bytes.txt` file contains raw data captured during the Windows driver initialization. If you identify byte sequences for RGB control, DPI switching, or other Ajazz models, please open a **Pull Request** or an **Issue** to help expand the project.
+
+---
+
+**Developer:** [Rockeyxx](https://github.com/Rockeyxx)
+**Tested Hardware:** Ajazz AJ179
+**License:** MIT
