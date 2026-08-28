@@ -43,6 +43,8 @@ int main(int argc, char *argv[]) {
   // Start with blank status
   write_status(-1, "disconnected");
 
+  int detached = 0;
+
   while (running) {
     // 1. Try to open device
     // If mouse is sleeping (5s rule), this returns NULL immediately.
@@ -53,8 +55,9 @@ int main(int argc, char *argv[]) {
       // DEVICE FOUND (Mouse is awake!)
 
       //  Claim Interface
-      if (libusb_kernel_driver_active(handle, INTERFACE_NUM) == 1) {
-        libusb_detach_kernel_driver(handle, INTERFACE_NUM);
+      if (libusb_kernel_driver_active(handle, INTERFACE_NUM) == 1 &&
+          libusb_detach_kernel_driver(handle, INTERFACE_NUM) == 0) {
+        detached = 1;
       }
       libusb_claim_interface(handle, INTERFACE_NUM);
 
@@ -67,8 +70,10 @@ int main(int argc, char *argv[]) {
 
       //  CLEAN EXIT (Crucial for Sleep Mode)
       // We release everything so the mouse feels free to disconnect/sleep.
+      // The kernel driver is NOT handed back here: usbhid would tear down and
+      // rebuild this interface's hidraw node on every single poll (~1300 times
+      // an hour). It is handed back once, after the loop.
       libusb_release_interface(handle, INTERFACE_NUM);
-      libusb_attach_kernel_driver(handle, INTERFACE_NUM);
       libusb_close(handle);
     } else {
       // Mouse is sleeping/unplugged.
@@ -78,6 +83,16 @@ int main(int argc, char *argv[]) {
     // Wait 1.5 seconds.
     // This is fast enough to catch movement, but slow enough to save CPU.
     usleep(1500000);
+  }
+
+  // Hand the kernel driver back once, on the way out.
+  if (detached) {
+    libusb_device_handle *h =
+        libusb_open_device_with_vid_pid(ctx, vendor_id, product_id);
+    if (h) {
+      libusb_attach_kernel_driver(h, INTERFACE_NUM);
+      libusb_close(h);
+    }
   }
 
   libusb_exit(ctx);
