@@ -8,6 +8,8 @@ HEADERS = src/protocol.h src/hidraw.h
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man
+DATADIR ?= $(PREFIX)/share
+APPDIR = $(DATADIR)/aj179-linux/gui
 SYSTEMD_DIR ?= /etc/systemd/system
 SYSCONFDIR ?= /etc
 UDEV_DIR ?= /etc/udev/rules.d
@@ -29,6 +31,14 @@ install: $(TARGET) $(CTL)
 	install -D -m 644 packaging/70-ajazz.rules $(DESTDIR)$(UDEV_DIR)/70-ajazz.rules
 	# uaccess tags only work before 73-seat-late.rules; drop the old name
 	rm -f $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules
+	# the desktop app: plain Python, run on the distro's PyQt6
+	install -d $(DESTDIR)$(APPDIR)/icons
+	install -m 644 $(wildcard gui/*.py) $(DESTDIR)$(APPDIR)/
+	install -m 644 gui/icons/*.svg $(DESTDIR)$(APPDIR)/icons/
+	printf '#!/bin/sh\nexec python3 %s/ajazz_gui.py "$$@"\n' '$(APPDIR)' > $(DESTDIR)$(BINDIR)/aj179
+	chmod 755 $(DESTDIR)$(BINDIR)/aj179
+	install -D -m 644 packaging/aj179.desktop $(DESTDIR)$(DATADIR)/applications/aj179.desktop
+	install -D -m 644 gui/icons/aj179.svg $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/aj179.svg
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
@@ -37,6 +47,9 @@ uninstall:
 	rm -f $(DESTDIR)$(SYSTEMD_DIR)/ajazz-mouse.service
 	rm -f $(DESTDIR)$(SYSCONFDIR)/conf.d/ajazz-battery
 	rm -f $(DESTDIR)$(UDEV_DIR)/70-ajazz.rules $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules
+	rm -f $(DESTDIR)$(BINDIR)/aj179 $(DESTDIR)$(DATADIR)/applications/aj179.desktop
+	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/aj179.svg
+	rm -rf $(DESTDIR)$(DATADIR)/aj179-linux
 
 test: tests/test_protocol tests/test_hidraw
 	./tests/test_protocol

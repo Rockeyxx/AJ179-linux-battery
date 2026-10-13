@@ -34,7 +34,8 @@ class MacroPage(DevicePage):
         self.steps.setAccessibleName("Macro steps")
         self.steps.setFixedHeight(150)
         self.keys = QKeySequenceEdit()
-        self.keys.setMaximumSequenceLength(1)
+        if hasattr(self.keys, "setMaximumSequenceLength"):  # Qt 6.5+
+            self.keys.setMaximumSequenceLength(1)
         self.keys.setAccessibleName("Key to add")
         self.keys.setToolTip(KEY_HINT)
         self.keys.setMinimumWidth(150)

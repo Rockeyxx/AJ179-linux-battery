@@ -65,7 +65,8 @@ class ButtonRow:
         for value, text in FUNCTIONS:
             self.combo.addItem(text, value)
         self.keys = QKeySequenceEdit()
-        self.keys.setMaximumSequenceLength(1)
+        if hasattr(self.keys, "setMaximumSequenceLength"):  # Qt 6.5+
+            self.keys.setMaximumSequenceLength(1)
         self.keys.setAccessibleName(f"Button {n} shortcut")
         self.keys.setToolTip(KEY_HINT)
         self.keys.setVisible(False)
