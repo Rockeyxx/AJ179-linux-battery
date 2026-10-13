@@ -288,7 +288,7 @@ static int cmd_dpi(int fd, const char *a, const char *b) {
   return apply(fd, req, 0x13, 25);
 }
 
-// "lighting off|breathing|constant [#RRGGBB] [brightness speed]" (0..4 each).
+// "lighting off|breathing|constant|neon [#RRGGBB] [brightness speed]" (0..4 each).
 static int cmd_lighting(int fd, int argc, char *argv[]) {
   uint8_t req[AJZ_REPORT_LEN], r[AJZ_REPORT_LEN], rgb[3] = {0xff, 0x00, 0x00};
   int mode, arg = 1, brightness, speed;
@@ -299,6 +299,8 @@ static int cmd_lighting(int fd, int argc, char *argv[]) {
     mode = AJZ_LIGHT_BREATHING;
   else if (strcmp(argv[0], "constant") == 0)
     mode = AJZ_LIGHT_CONSTANT;
+  else if (strcmp(argv[0], "neon") == 0) // hidden by the official app; a rainbow on the AJ179
+    mode = AJZ_LIGHT_NEON;
   else
     return 2;
 
@@ -550,7 +552,7 @@ static int usage(void) {
           "usage: ajazzctl info | show [--json]\n"
           "       ajazzctl rate 125|250|500|1000\n"
           "       ajazzctl dpi <stage> <value> | dpi select <stage>\n"
-          "       ajazzctl lighting off|breathing|constant [#RRGGBB] [brightness speed]\n"
+          "       ajazzctl lighting off|breathing|constant|neon [#RRGGBB] [brightness speed]\n"
           "       ajazzctl dpi-colour <stage> #RRGGBB\n"
           "       ajazzctl sensor lod 1|2 | sensor motion-sync|angle-snap on|off\n"
           "       ajazzctl power sleep <10 s steps> | power debounce <0-20 ms>\n"

@@ -7,7 +7,7 @@ from ctl import Lighting, lighting_commands, parse_lighting
 from page import DevicePage
 from swatch import Swatch
 
-MODES = ("off", "breathing", "constant")  # the modes the AJ179 offers
+MODES = ("off", "breathing", "constant", "neon")  # what the AJ179 shows (neon: rainbow)
 
 
 class LightingPage(DevicePage):
@@ -34,7 +34,7 @@ class LightingPage(DevicePage):
         rows = (("Mode", self.modes.buttons()),
                 ("Colour", [self.swatch, QLabel("Constant mode")]),
                 ("Brightness", [self.brightness]),
-                ("Speed", [self.speed, QLabel("Breathing mode")]))
+                ("Speed", [self.speed, QLabel("Breathing and neon")]))
         for r, (name, widgets) in enumerate(rows):
             label = QLabel(name)
             label.setObjectName("name")
@@ -65,7 +65,7 @@ class LightingPage(DevicePage):
         mode = self._mode()
         self.swatch.setEnabled(mode == "constant")
         self.brightness.setEnabled(mode != "off")
-        self.speed.setEnabled(mode == "breathing")
+        self.speed.setEnabled(mode in ("breathing", "neon"))
         super()._changed()
 
     def parse(self, text):
