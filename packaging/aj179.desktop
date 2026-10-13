@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AJ179
+GenericName=Mouse settings
+Comment=Battery, DPI, lighting, buttons and macros for the Ajazz AJ179
+Exec=aj179
+Icon=aj179
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=ajazz;mouse;battery;dpi;
+StartupWMClass=aj179
