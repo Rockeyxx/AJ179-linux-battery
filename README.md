@@ -1,5 +1,5 @@
 # AJ179-linux-battery
-A lightweight, high-efficiency C daemon designed to interface with **Ajazz wireless mice** on Linux. It retrieves battery telemetry via `libusb` and writes the state to a local buffer, facilitating integration with status bars like **Waybar**, **Polybar**, or **Eww**.
+A small C daemon and command-line tool for the **Ajazz AJ179** wireless mouse on Linux. The daemon reads the battery level through the receiver's `hidraw` interface and writes it to a file for status bars like **Waybar**, **Polybar**, or **Eww**. The `ajazzctl` tool changes the mouse settings that the official Windows driver offers.
 
 ---
 
@@ -11,6 +11,7 @@ A lightweight, high-efficiency C daemon designed to interface with **Ajazz wirel
     * [Automatic Installation](#automatic-installation)
     * [Manual Installation](#manual-installation)
 * [Waybar Integration](#waybar-integration)
+* [Mouse Settings (ajazzctl)](#mouse-settings-ajazzctl)
 * [Technical Notes & Credits](#technical-notes--credits)
 
 ---
@@ -18,9 +19,11 @@ A lightweight, high-efficiency C daemon designed to interface with **Ajazz wirel
 ## Features
 The official Ajazz driver is Windows-only. This Linux alternative:
 
-* **Respects Sleep Mode**: Unlike simple scripts, this daemon detects when your mouse goes to sleep and intelligently pauses, preventing USB crashes.
+* **Battery right away**: asks the receiver for the battery level when it starts, then listens for the updates the mouse sends on its own. It keeps showing the last level while the mouse sleeps.
 
-* **Ultra Low Resource Usage**: Uses 0.0% CPU. It utilizes an event-driven sleep loop and only talks to the mouse when it's actively moving.
+* **Leaves the USB device alone**: it uses the kernel's `hidraw` node and never detaches the kernel driver, so it causes no USB re-enumeration.
+
+* **Mouse settings**: report rate, DPI stages and colours, lighting, lift-off distance, Motion Sync, Angle Snap, power options, button mapping and macros (see [ajazzctl](#mouse-settings-ajazzctl)).
 
 * **JSON Output**: Directly formatted for Waybar.
 
@@ -80,7 +83,7 @@ The included `install.sh` script automates dependency installation, compilation 
     ```bash
     chmod +x install.sh
     ```
-2.  Execute with elevated privileges (requires mouse movment):
+2.  Execute with elevated privileges:
     ```bash
     sudo ./install.sh
     ```
@@ -94,11 +97,11 @@ For users preferring manual deployment or packaging:
 
 Arch:
 ```Bash
-sudo pacman -S libusb gcc make
+sudo pacman -S gcc make
 ```
 Debian:
 ```Bash
-sudo apt install libusb-1.0-0-dev gcc make
+sudo apt install gcc make
 ```
 2.  **Compile & Deploy:**
     ```bash
@@ -140,17 +143,42 @@ in your("modules-right": [ here ]) or ("modules-left": [ here ]) add "custom/aja
 ```
 ---
 
+## Mouse Settings (ajazzctl)
+
+`ajazzctl` is installed next to the daemon and runs as your normal user. Settings only reach the mouse while it is awake, so move it if the tool says it is asleep or idle; it waits and retries. Each change is read back from the mouse to confirm it.
+
+```Bash
+ajazzctl show                          # all current settings
+ajazzctl info                          # device id, sensor, battery
+ajazzctl rate 1000                     # 125, 250, 500 or 1000 Hz
+ajazzctl dpi 2 1600                    # set DPI stage 2
+ajazzctl dpi select 2                  # make stage 2 active
+ajazzctl dpi-colour 2 '#00ff00'        # LED colour of stage 2
+ajazzctl lighting constant '#ff00ff' 4 0   # off | breathing | constant [#RRGGBB] [brightness speed]
+ajazzctl sensor lod 1                  # lift-off distance: 1 = 1 mm, 2 = 2 mm
+ajazzctl sensor motion-sync on
+ajazzctl sensor angle-snap off
+ajazzctl power wake-on-move on
+ajazzctl button 4 key:ctrl+c           # buttons: 1 left (locked) 2 right 3 middle 4 back 5 forward 6 dpi
+ajazzctl macro 5 ctrl+c wait:50 ctrl+v
+ajazzctl buttons reset                 # factory button mapping
+```
+
+Run `ajazzctl` without arguments for the full list. The mouse has no command to read button mappings back, so `ajazzctl` remembers the last mapping it wrote in `~/.config/ajazzctl/buttons`. Button 1 (left click) cannot be remapped, so a mistake can always be undone.
+
+---
+
 ## Technical Notes & Credits
 
 ### Reverse Engineering
-The control bytes used in this daemon were identified via **USB traffic analysis (Wireshark)**. The implementation mimics the initial handshake and status request sent by the Windows driver to the ajaz 179 app.
+The protocol was decompiled from the official **AJAZZ Driver (X) 1.0.7.0** and checked against the mouse. [docs/PROTOCOL.md](docs/PROTOCOL.md) documents every command, the code address it came from, and which parts were confirmed on hardware. Firmware update commands are deliberately not implemented.
 
 ### Disclaimer
 * **Experimental:** This utility is an independent implementation and is not affiliated with Ajazz.
-* **Bus Permissions:** The installer deploys a `udev` rule to `/etc/udev/rules.d/` to allow unprivileged access to the mouse's USB interface.
+* **Permissions:** The installer deploys a `udev` rule to `/etc/udev/rules.d/` that gives the logged-in user access to the receiver's `hidraw` nodes.
 
 ### Contributions
-The `bytes.txt` file contains raw data captured during the Windows driver initialization. If you identify byte sequences for RGB control, DPI switching, or other Ajazz models, please open a **Pull Request** or an **Issue** to help expand the project.
+Wired mode and other Ajazz models are not supported yet. If you have one, the output of `ajazzctl info` and `lsusb` in an **Issue** is a good start, and **Pull Requests** are welcome. Run `make test` before sending changes.
 
 ---
 
