@@ -158,8 +158,12 @@ static int cmd_show(int fd, int json) {
     printf("],\"colours\":[");
     for (int i = 0; i < 6; i++)
       printf("%s\"#%02x%02x%02x\"", i ? "," : "", col[4 + 3 * i], col[5 + 3 * i], col[6 + 3 * i]);
-    printf("]},\"lighting\":{\"mode\":\"%s\",\"brightness\":%d,\"speed\":%d},", mode,
-           light[5] >> 4, light[5] & 0x0f);
+    printf("]},\"lighting\":{\"mode\":\"%s\",\"colour\":", mode);
+    if (light[4] == AJZ_LIGHT_CONSTANT) // only constant mode has one colour after brightness/speed
+      printf("\"#%02x%02x%02x\"", light[6], light[7], light[8]);
+    else
+      printf("null");
+    printf(",\"brightness\":%d,\"speed\":%d},", light[5] >> 4, light[5] & 0x0f);
     printf("\"lod\":%d,\"motion_sync\":%s,\"angle_snap\":%s,", sens[4],
            sens[5] ? "true" : "false", sens[6] ? "true" : "false");
     printf("\"power\":{\"sleep\":%d,\"wake_on_move\":%d,\"lights_off_on_move\":%d,"
@@ -275,6 +279,10 @@ static int cmd_lighting(int fd, int argc, char *argv[]) {
     fprintf(stderr, "brightness and speed must be 0..4\n");
     return 2;
   }
+  // A write that changes the mode only switches it: the mouse brings back that
+  // mode's saved brightness, speed and colour. Writing again applies ours.
+  if (r[4] != mode && exchange(fd, req, r) != 0)
+    return 1;
   // The 0x15 reply carries the colour for constant mode ("03 40 ff 00 ff").
   return apply(fd, req, 0x15, mode == AJZ_LIGHT_CONSTANT ? 5 : 2);
 }

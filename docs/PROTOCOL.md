@@ -161,6 +161,12 @@ Modes: 0 off, 1 flowing, 2 breathing, 3 constant, 4 neon, 5 colour wave. 0/2/3 a
 **[code+wire]** (match captured traffic); 1/4/5 inferred from the XML `light_N` order and
 disabled for the AJ179. Brightness and speed are 0–4 each.
 
+**Changing the mode takes two writes** [wire, 2026-10-13]: a `0x05` write that changes
+the mode only switches it — the mouse brings back that mode's saved brightness, speed
+and colour (`03 40 ff 00 ff` written from breathing read back `03 20 00 ff ff`, the last
+constant settings). The same write sent again, now in that mode, applies them.
+ajazzctl sends it twice when the mode changes.
+
 ### 0x06 — set lift-off distance / sensor flags [code] (0x435706)
 `06 00 01 05 <lod> <motion_sync> <angle_snap>` (each 0/1)
 
