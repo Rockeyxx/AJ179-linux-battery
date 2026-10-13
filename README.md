@@ -21,7 +21,7 @@ The official Ajazz driver is Windows-only. This Linux alternative:
 
 * **Battery right away**: asks for the battery level when it starts, then listens for the updates the mouse sends on its own. It keeps showing the last level while the mouse sleeps.
 
-* **Receiver or cable**: uses the USB cable when the mouse is plugged in (the level then shows ⚡ and the Waybar class `charging`) and the 2.4 GHz receiver otherwise. `ajazzctl` follows the same rule.
+* **Receiver or cable**: uses the USB cable when the mouse is plugged in (the level then shows ⚡ and the Waybar class `charging`) and the 2.4 GHz receiver otherwise. `ajazzctl` follows the same rule; the mouse keeps one set of settings for both.
 
 * **Leaves the USB device alone**: it uses the kernel's `hidraw` node and never detaches the kernel driver, so it causes no USB re-enumeration.
 

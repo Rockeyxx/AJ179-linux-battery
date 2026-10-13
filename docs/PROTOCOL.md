@@ -51,6 +51,8 @@ Live behaviour (2026-10-13) **[wire]** — our implementation differs from the v
 - Reply lengths can differ from the write: `0x13` reports `len 0x19`, `0x17` `len 5`.
 - Over the USB cable every command is answered by the mouse in ~2 ms; there is no idle
   or asleep status. The receiver then reports the mouse as not connected (info byte 14 = 0).
+- Cable and receiver share one set of settings: a stage-6 colour written over the cable
+  (`#ff00fe`) read back unchanged through the receiver after unplugging.
 
 ## Status frames [code]
 
