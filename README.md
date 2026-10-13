@@ -19,7 +19,9 @@ A small C daemon and command-line tool for the **Ajazz AJ179** wireless mouse on
 ## Features
 The official Ajazz driver is Windows-only. This Linux alternative:
 
-* **Battery right away**: asks the receiver for the battery level when it starts, then listens for the updates the mouse sends on its own. It keeps showing the last level while the mouse sleeps.
+* **Battery right away**: asks for the battery level when it starts, then listens for the updates the mouse sends on its own. It keeps showing the last level while the mouse sleeps.
+
+* **Receiver or cable**: uses the USB cable when the mouse is plugged in (the level then shows ⚡ and the Waybar class `charging`) and the 2.4 GHz receiver otherwise. `ajazzctl` follows the same rule.
 
 * **Leaves the USB device alone**: it uses the kernel's `hidraw` node and never detaches the kernel driver, so it causes no USB re-enumeration.
 
@@ -178,7 +180,7 @@ The protocol was decompiled from the official **AJAZZ Driver (X) 1.0.7.0** and c
 * **Permissions:** The installer deploys a `udev` rule to `/etc/udev/rules.d/` that gives the logged-in user access to the receiver's `hidraw` nodes.
 
 ### Contributions
-Wired mode and other Ajazz models are not supported yet. If you have one, the output of `ajazzctl info` and `lsusb` in an **Issue** is a good start, and **Pull Requests** are welcome. Run `make test` before sending changes.
+Other Ajazz models are not supported yet. If you have one, the output of `ajazzctl info` and `lsusb` in an **Issue** is a good start, and **Pull Requests** are welcome. Run `make test` before sending changes.
 
 ---
 
