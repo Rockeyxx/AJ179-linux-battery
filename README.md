@@ -1,21 +1,24 @@
 # aj179-linux
 
 Linux support for the **Ajazz AJ179** (dual mode) mouse. The official Ajazz software
-only runs on Windows; this project gives you two things on Linux:
+only runs on Windows; this project gives you three things on Linux:
 
 * **`ajazz_daemon`**: a background service that puts the mouse's battery level in your
   status bar (Waybar, Polybar, Eww, ...).
 * **`ajazzctl`**: a command-line tool for every setting of the official driver: DPI,
   report rate, lighting, lift-off distance, Motion Sync, Angle Snap, power options,
   button mapping and macros.
+* **The AJ179 app**: a desktop window for all of the above, styled after the official
+  driver.
 
-Both work over the 2.4 GHz receiver and over the USB cable.
+All of them work over the 2.4 GHz receiver and over the USB cable.
 
 ---
 
 ## Contents
 * [Supported hardware](#supported-hardware)
 * [Installation](#installation)
+* [Desktop app](#desktop-app)
 * [Battery in your status bar](#battery-in-your-status-bar)
 * [Mouse settings: ajazzctl](#mouse-settings-ajazzctl)
 * [How it works](#how-it-works)
@@ -80,6 +83,34 @@ sudo systemctl enable --now ajazz-mouse.service
 | `/etc/conf.d/ajazz-battery` | receiver USB IDs for the daemon (defaults are right for the AJ179) |
 
 To remove everything: `sudo ./uninstall.sh` (or `sudo make uninstall`).
+
+---
+
+## Desktop app
+
+![The AJ179 app on its DPI page](docs/images/aj179-app.png)
+
+A window for the battery, DPI stages, report rate and sensor options, lighting, buttons
+and macros, laid out like the official driver. It makes every change through
+`ajazzctl`, so install that first (see [Installation](#installation)).
+
+It needs [uv](https://docs.astral.sh/uv/) (Arch: `sudo pacman -S uv`), which fetches
+PyQt6 into `gui/.venv`. From this folder:
+
+```bash
+uv sync --project gui             # first time only: downloads PyQt6 (~90 MB)
+gui/install-desktop-entry.sh      # adds "AJ179" to your application launcher
+```
+
+Then open **AJ179** from your launcher, or run `uv run --project gui gui/ajazz_gui.py`.
+The launcher entry runs the app from this folder, so keep the clone where it is (run
+the script again if you move it).
+
+* The battery page reads the battery service's file, so the service must be running.
+* The mouse cannot report its buttons or macros; those pages show what was last set
+  from Linux.
+* Over the receiver the mouse must be awake; a page waiting for it says so. Move the
+  mouse and it carries on.
 
 ---
 
@@ -234,9 +265,11 @@ src/        daemon, ajazzctl, protocol and hidraw code
 tests/      unit tests (make test)
 packaging/  systemd unit, udev rule, config
 docs/       PROTOCOL.md, ajazzctl man page
+gui/        the desktop app (PyQt6) and its tests
 ```
 
-`make` builds both programs and `make test` runs the tests. Pull requests are welcome;
+`make` builds both programs and `make test` runs the tests;
+`uv run --project gui pytest gui/tests` runs the app's tests. Pull requests are welcome;
 please run `make test` first. If you have another Ajazz model, an issue with the output
 of `lsusb` and `ajazzctl info` is a good start.
 
