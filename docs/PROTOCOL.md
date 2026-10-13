@@ -207,7 +207,7 @@ even though button 5's bytes follow — replicate exactly.) Factory table:
 | 0x10 | mouse button | mask (as above); scroll left/right `00 F5` / `00 F6` |
 | 0x20 | wheel | `01` up / `FF` down |
 | 0x30 | repeat ("fire") | count, interval |
-| 0x40 | DPI | `01`, `02`, `03` (loop / + / − — which is which **[open]**) |
+| 0x40 | DPI | `01` loop, `02` up, `03` down **[wire]**: with `02`/`03` on the DPI button, one press moved stage 3 to 4 / 2 (2026-10-13). The official app only offers loop. |
 | 0x60 | special | `04`, `01`; `00 00` = disabled **[open]** |
 | 0x70 | keyboard | modifier mask, HID usage |
 | 0x80 | consumer | 16-bit LE usage (`CD` play, `B5` next, `B6` prev, `B7` stop, `E9` vol+, `EA` vol−, `E2` mute, `0183` player, `0192` calculator, `0194` my computer, `0223` web, `018A` mail, `6F`/`70` brightness) |

@@ -553,7 +553,8 @@ static int usage(void) {
           "       ajazzctl button <2-6> <function> | buttons reset\n"
           "         buttons: 1 left (locked) 2 right 3 middle 4 back 5 forward 6 dpi\n"
           "         functions: left right middle back forward scroll-up scroll-down\n"
-          "           dpi-loop play-pause stop previous next volume-up volume-down mute\n"
+          "           dpi-loop dpi-up dpi-down play-pause stop previous next volume-up\n"
+          "           volume-down mute\n"
           "           key:[ctrl+][shift+][alt+][super+]<a-z|0-9|f1-f12|enter|esc|tab|space|backspace>\n"
           "       ajazzctl macro <2-6> <[mod+]key|wait:ms>...  e.g. macro 4 ctrl+c wait:50 ctrl+v\n"
           "       ajazzctl read <cmd-hex>   (10 12 13 14 15 16 17 20)\n");

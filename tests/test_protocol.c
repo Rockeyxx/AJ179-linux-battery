@@ -320,6 +320,8 @@ static void test_button_codes(void) {
   CHECK(code_is("scroll-up", 0x20, 0x01, 0x00));
   CHECK(code_is("scroll-down", 0x20, 0xff, 0x00));
   CHECK(code_is("dpi-loop", 0x40, 0x01, 0x00));
+  CHECK(code_is("dpi-up", 0x40, 0x02, 0x00));   // confirmed on the mouse: stage 3 -> 4
+  CHECK(code_is("dpi-down", 0x40, 0x03, 0x00)); // stage 3 -> 2
   CHECK(code_is("play-pause", 0x80, 0xcd, 0x00));
   CHECK(code_is("volume-up", 0x80, 0xe9, 0x00));
   CHECK(code_is("mute", 0x80, 0xe2, 0x00));
@@ -338,7 +340,7 @@ static void test_button_key_codes(void) {
 // ajz_button_name is the inverse of ajz_button_code (for show --json).
 static void test_button_names_round_trip(void) {
   static const char *names[] = {"left", "right", "middle", "back", "forward", "scroll-up",
-                                "scroll-down", "dpi-loop", "play-pause", "mute",
+                                "scroll-down", "dpi-loop", "dpi-up", "dpi-down", "play-pause", "mute",
                                 "key:a", "key:ctrl+c", "key:super+tab", "key:ctrl+shift+esc",
                                 "key:f5", "key:f12", "key:0", "key:9", "key:space"};
   uint8_t c[3];
