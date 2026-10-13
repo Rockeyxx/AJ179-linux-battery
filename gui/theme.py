@@ -73,5 +73,11 @@ QListWidget {{ color: #ffffff; background: {BLACK}; border: 1px solid {LINE};
 QListWidget:focus {{ border-color: {RED}; }}
 QListWidget::item {{ padding: 3px 6px; }}
 QListWidget::item:selected {{ background: {DARK_RED}; color: #ffffff; }}
+QScrollArea {{ background: transparent; }}
+QScrollBar:vertical {{ background: transparent; width: 10px; }}
+QScrollBar:horizontal {{ background: transparent; height: 10px; }}
+QScrollBar::handle {{ background: {LINE}; border-radius: 4px; min-height: 30px; min-width: 30px; }}
+QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; }}
+QScrollBar::add-page, QScrollBar::sub-page {{ background: transparent; }}
 QToolTip {{ color: #ffffff; background: {CARD}; border: 1px solid {LINE}; }}
 """

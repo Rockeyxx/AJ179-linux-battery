@@ -47,7 +47,7 @@ class DevicePage(QWidget):
         raise NotImplementedError
 
     def load(self):
-        self._start("Reading the mouse…", saving=False)
+        self._start("Reading the mouse… move it if it's asleep", saving=False)
         self.ctl.run([["show", "--json"]], self)
 
     def apply(self):

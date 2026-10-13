@@ -13,7 +13,8 @@ from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import (QColor, QIcon, QKeySequence, QLinearGradient, QPainter, QPen,
                          QPolygonF, QShortcut)
 from PyQt6.QtWidgets import (QApplication, QButtonGroup, QFrame, QHBoxLayout, QLabel,
-                             QProgressBar, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
+                             QProgressBar, QPushButton, QScrollArea, QStackedWidget,
+                             QVBoxLayout, QWidget)
 
 from buttons_page import ButtonsPage
 from ctl import Ctl
@@ -151,7 +152,8 @@ class MainWindow(QWidget):
         self.setObjectName("root")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.setStyleSheet(STYLE)
-        self.setFixedSize(860, 540)  # a fixed size makes tiling compositors float it
+        self.setMinimumSize(480, 360)  # resizable, so tiling compositors tile it
+        self.resize(860, 540)
 
         self.ctl = Ctl()  # shared: one ajazzctl job at a time
         self.dpi = DpiPage(self.ctl)
@@ -177,9 +179,8 @@ class MainWindow(QWidget):
         brand.addWidget(title)
         brand.addWidget(accent)
 
-        sidebar = QFrame()
+        self.sidebar = sidebar = QFrame()
         sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(190)
         side = QVBoxLayout(sidebar)
         side.setContentsMargins(0, 20, 0, 20)
         side.setSpacing(0)
@@ -201,19 +202,40 @@ class MainWindow(QWidget):
         group.idClicked.connect(self._show_page)
         self.tabs[0].setChecked(True)
 
-        content = QVBoxLayout()
-        content.setContentsMargins(32, 28, 32, 28)
-        content.addWidget(self.pages)
+        # Pages scroll when the tile is smaller than they are, and stay a readable width,
+        # centred, when it is much wider.
+        inner = QWidget()
+        self.content = QHBoxLayout(inner)
+        self.pages.setMaximumWidth(860)
+        self.content.addStretch(1)
+        self.content.addWidget(self.pages, 30)
+        self.content.addStretch(1)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll.viewport().setAutoFillBackground(False)
+        self.scroll.setWidget(inner)
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
         root.addWidget(sidebar)
-        root.addLayout(content, 1)
+        root.addWidget(self.scroll, 1)
+        self._fit(self.width())
 
         QShortcut(QKeySequence.StandardKey.Quit, self, activated=self.close)
         self.timer = QTimer(self, interval=2000, timeout=self.refresh)
         self.timer.start()
         self.refresh()
+
+    def resizeEvent(self, event):
+        self._fit(event.size().width())
+        super().resizeEvent(event)
+
+    def _fit(self, width):
+        narrow = width < 760  # e.g. a third of the screen: give the page the room
+        self.sidebar.setFixedWidth(132 if narrow else 190)
+        margin = 16 if narrow else 32
+        self.content.setContentsMargins(margin, 24, margin, 24)
 
     def _home_page(self):
         heading = QLabel("Battery")

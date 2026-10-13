@@ -51,7 +51,8 @@ class LightingPage(DevicePage):
         slider = QSlider(Qt.Orientation.Horizontal)
         slider.setRange(0, 4)
         slider.setPageStep(1)
-        slider.setFixedWidth(240)
+        slider.setMinimumWidth(120)
+        slider.setMaximumWidth(260)
         slider.setAccessibleName(name)
         slider.valueChanged.connect(self._changed)
         return slider

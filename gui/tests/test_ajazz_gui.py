@@ -87,3 +87,17 @@ def test_choosing_settings_shows_and_loads_the_settings_page(app, tmp_path, fake
     assert win.pages.currentWidget() is win.settings
     assert spy.wait(5000)
     assert win.settings.rates.checkedId() == 1000
+
+
+def test_window_tiles_and_every_page_fits_a_half_screen_tile(app, tmp_path, fake_ctl):
+    win = MainWindow(tmp_path / "none")
+    assert win.minimumSize() != win.maximumSize()  # a fixed size makes Hyprland float it
+    for i in (1, 5):  # pages that read the mouse get their rows
+        spy = QSignalSpy(win.ctl.done)
+        win.tabs[i].click()
+        assert spy.wait(5000)
+    win._fit(953)  # half of a 1920 px screen, as Hyprland tiles a 2nd-4th window
+    left, _, right, _ = win.content.getContentsMargins()
+    room = 953 - win.sidebar.width() - left - right
+    for name, page in win.page_for.items():
+        assert page.minimumSizeHint().width() <= room, name

@@ -9,7 +9,8 @@ from page import DevicePage
 class SettingsPage(DevicePage):
     def __init__(self, ctl):
         super().__init__(ctl, "Settings", "Report rate, sensor and power options.")
-        self.rates = self._choices("Report rate", [(hz, f"{hz} Hz") for hz in (125, 250, 500, 1000)])
+        self.rates = self._choices("Report rate", [(hz, str(hz)) for hz in (125, 250, 500, 1000)],
+                                   " Hz")
         self.lods = self._choices("Lift-off distance", [(1, "Low (1 mm)"), (2, "High (2 mm)")])
         self.motion_sync = self._check("Motion sync")
         self.angle_snap = self._check("Angle snap")
@@ -22,11 +23,11 @@ class SettingsPage(DevicePage):
         card.setObjectName("card")
         grid = QGridLayout(card)
         grid.setContentsMargins(24, 18, 24, 18)
-        grid.setHorizontalSpacing(28)
+        grid.setHorizontalSpacing(20)
         grid.setVerticalSpacing(12)
         grid.setColumnStretch(1, 1)
         rows = (("SENSOR", None),
-                ("Report rate", self.rates.buttons()),
+                ("Report rate (Hz)", self.rates.buttons()),
                 ("Lift-off distance", self.lods.buttons()),
                 ("", [self.motion_sync, self.angle_snap]),
                 ("POWER", None),
@@ -41,7 +42,7 @@ class SettingsPage(DevicePage):
                 continue
             label.setObjectName("name")
             line = QHBoxLayout()
-            line.setSpacing(20)
+            line.setSpacing(14)
             for w in widgets:
                 line.addWidget(w)
             line.addStretch()
@@ -49,11 +50,11 @@ class SettingsPage(DevicePage):
             grid.addLayout(line, r, 1)
         self.body.addWidget(card)
 
-    def _choices(self, name, options):
+    def _choices(self, name, options, unit=""):
         group = QButtonGroup(self)
         for value, text in options:
             button = QRadioButton(text, self)  # parented, so Qt keeps it alive
-            button.setAccessibleName(f"{name} {text}")
+            button.setAccessibleName(f"{name} {text}{unit}")
             group.addButton(button, value)
         group.idToggled.connect(self._changed)
         return group
