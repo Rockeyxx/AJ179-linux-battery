@@ -133,11 +133,21 @@ static int read_sensor_id(int fd, uint8_t *sensor) {
   return 0;
 }
 
+static void load_buttons(uint8_t keys[6][3]);
+
+// A button's function name, for show.
+static const char *button_label(const uint8_t code[3], char *out, size_t size) {
+  return ajz_button_name(code, out, size) == 0 ? out : "unknown";
+}
+
 // Prints every readable setting, as text or (json) as one JSON line for the GUI.
+// Buttons have no read command, so they come from the map ajazzctl last wrote.
 static int cmd_show(int fd, int json) {
   static const char *lights[] = {"off", "flowing", "breathing", "constant", "neon", "wave"};
   uint8_t sensor, rate[AJZ_REPORT_LEN], stages[AJZ_REPORT_LEN], col[AJZ_REPORT_LEN],
       light[AJZ_REPORT_LEN], sens[AJZ_REPORT_LEN], power[AJZ_REPORT_LEN], fw[AJZ_REPORT_LEN];
+  uint8_t keys[6][3];
+  char name[64];
   int index, count, dpi[6], have_fw;
   const char *mode;
 
@@ -148,6 +158,7 @@ static int cmd_show(int fd, int json) {
     return 1;
   have_fw = do_read(fd, 0x20, fw) == 0;
   mode = light[4] < 6 ? lights[light[4]] : "?";
+  load_buttons(keys);
   if (count > 6)
     count = 6;
 
@@ -169,6 +180,10 @@ static int cmd_show(int fd, int json) {
     printf("\"power\":{\"sleep\":%d,\"wake_on_move\":%d,\"lights_off_on_move\":%d,"
            "\"debounce\":%d},",
            power[4], power[5], power[6], power[7]);
+    printf("\"buttons\":[");
+    for (int i = 0; i < 6; i++)
+      printf("%s\"%s\"", i ? "," : "", button_label(keys[i], name, sizeof(name)));
+    printf("],");
     if (have_fw)
       printf("\"receiver_fw\":\"%x.%02x\"}\n", fw[4], fw[5]);
     else
@@ -192,6 +207,10 @@ static int cmd_show(int fd, int json) {
   printf("angle snap:   %s\n", sens[6] ? "on" : "off");
   printf("power (raw):  sleep %d, wake-on-move %d, lights-off-on-move %d, debounce %d\n",
          power[4], power[5], power[6], power[7]);
+  printf("buttons:     ");
+  for (int i = 0; i < 6; i++)
+    printf(" %s", button_label(keys[i], name, sizeof(name)));
+  printf("  (as last set by ajazzctl)\n");
   if (have_fw)
     printf("receiver fw:  %x.%02x\n", fw[4], fw[5]);
   return 0;

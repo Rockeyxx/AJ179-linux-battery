@@ -335,6 +335,24 @@ static void test_button_key_codes(void) {
   CHECK(code_is("key:0", 0x70, 0x00, 0x27));
 }
 
+// ajz_button_name is the inverse of ajz_button_code (for show --json).
+static void test_button_names_round_trip(void) {
+  static const char *names[] = {"left", "right", "middle", "back", "forward", "scroll-up",
+                                "scroll-down", "dpi-loop", "play-pause", "mute",
+                                "key:a", "key:ctrl+c", "key:super+tab", "key:ctrl+shift+esc",
+                                "key:f5", "key:f12", "key:0", "key:9", "key:space"};
+  uint8_t c[3];
+  char out[64];
+
+  for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++)
+    CHECK(ajz_button_code(names[i], c) == 0 && ajz_button_name(c, out, sizeof(out)) == 0 &&
+          strcmp(out, names[i]) == 0);
+  ajz_macro_button(3, c);
+  CHECK(ajz_button_name(c, out, sizeof(out)) == 0 && strcmp(out, "macro") == 0);
+  CHECK(ajz_button_name((const uint8_t[]){0x55, 0x01, 0x02}, out, sizeof(out)) == -1);
+  CHECK(ajz_button_name((const uint8_t[]){0x70, 0x00, 0x99}, out, sizeof(out)) == -1);
+}
+
 static void test_button_code_rejects_unknown(void) {
   uint8_t c[3];
 
@@ -421,6 +439,7 @@ int main(void) {
   test_button_codes();
   test_button_key_codes();
   test_button_code_rejects_unknown();
+  test_button_names_round_trip();
   test_set_dpi_colours_matches_live_reply();
   test_set_power_matches_live_reply();
   test_dpi_codec_paw3395();
