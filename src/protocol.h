@@ -1,6 +1,7 @@
 #ifndef AJZ_PROTOCOL_H
 #define AJZ_PROTOCOL_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 // AJ179 receiver vendor protocol. Byte layouts and their sources are in
@@ -41,6 +42,8 @@ int ajz_set_lighting(uint8_t f[AJZ_REPORT_LEN], int mode, int brightness,
 int ajz_set_sensor(uint8_t f[AJZ_REPORT_LEN], int lod, int motion_sync,
                    int angle_snap);
 int ajz_button_code(const char *name, uint8_t code[3]);
+// The name ajz_button_code takes for a code ("macro" for macro slots); -1 if unknown.
+int ajz_button_name(const uint8_t code[3], char *out, size_t size);
 
 // Macros: payload is split into at most 15 packets of 27 bytes.
 #define AJZ_MACRO_MAX_EVENTS 101

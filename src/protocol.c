@@ -192,13 +192,14 @@ static const struct {
     {"mute", {0x80, 0xe2, 0x00}},
 };
 
+static const struct {
+  const char *name;
+  int usage;
+} named_keys[] = {{"enter", 0x28}, {"esc", 0x29}, {"backspace", 0x2a},
+                  {"tab", 0x2b},   {"space", 0x2c}};
+
 // HID keyboard usage for a key name; same table as the vendor's 0x44e130.
 static int key_usage(const char *k) {
-  static const struct {
-    const char *name;
-    int usage;
-  } named[] = {{"enter", 0x28}, {"esc", 0x29}, {"backspace", 0x2a},
-               {"tab", 0x2b},   {"space", 0x2c}};
 
   if (k[0] && !k[1]) {
     if (k[0] >= 'a' && k[0] <= 'z')
@@ -210,10 +211,31 @@ static int key_usage(const char *k) {
   }
   if (k[0] == 'f' && atoi(k + 1) >= 1 && atoi(k + 1) <= 12)
     return 0x3a + atoi(k + 1) - 1;
-  for (size_t i = 0; i < sizeof(named) / sizeof(named[0]); i++)
-    if (strcmp(k, named[i].name) == 0)
-      return named[i].usage;
+  for (size_t i = 0; i < sizeof(named_keys) / sizeof(named_keys[0]); i++)
+    if (strcmp(k, named_keys[i].name) == 0)
+      return named_keys[i].usage;
   return -1;
+}
+
+// The key name for a HID usage: the inverse of key_usage.
+static int key_name(int usage, char *out, size_t size) {
+  if (usage >= 0x04 && usage <= 0x1d)
+    snprintf(out, size, "%c", 'a' + usage - 0x04);
+  else if (usage >= 0x1e && usage <= 0x26)
+    snprintf(out, size, "%c", '1' + usage - 0x1e);
+  else if (usage == 0x27)
+    snprintf(out, size, "0");
+  else if (usage >= 0x3a && usage <= 0x45)
+    snprintf(out, size, "f%d", usage - 0x3a + 1);
+  else {
+    for (size_t i = 0; i < sizeof(named_keys) / sizeof(named_keys[0]); i++)
+      if (named_keys[i].usage == usage) {
+        snprintf(out, size, "%s", named_keys[i].name);
+        return 0;
+      }
+    return -1;
+  }
+  return 0;
 }
 
 // "left", "dpi-loop", "volume-up", ... or "key:[ctrl+][shift+][alt+][super+]<key>".
@@ -322,6 +344,29 @@ int ajz_macro_packets(int slot, const uint8_t events[][4], int n,
 }
 
 // Button code that plays the macro in this slot once (0x433013).
+int ajz_button_name(const uint8_t code[3], char *out, size_t size) {
+  static const char *mods[] = {"ctrl+", "shift+", "alt+", "super+"};
+  char buf[64] = "key:", key[16];
+
+  for (size_t i = 0; i < sizeof(button_names) / sizeof(button_names[0]); i++)
+    if (memcmp(code, button_names[i].code, 3) == 0) {
+      snprintf(out, size, "%s", button_names[i].name);
+      return 0;
+    }
+  if (code[0] == 0x90) { // a macro slot (ajz_macro_button)
+    snprintf(out, size, "macro");
+    return 0;
+  }
+  if (code[0] != 0x70 || (code[1] & 0xf0) || key_name(code[2], key, sizeof(key)) != 0)
+    return -1;
+  for (int b = 0; b < 4; b++)
+    if (code[1] & (1 << b))
+      strcat(buf, mods[b]);
+  strcat(buf, key);
+  snprintf(out, size, "%s", buf);
+  return 0;
+}
+
 void ajz_macro_button(int slot, uint8_t code[3]) {
   code[0] = 0x90;
   code[1] = slot | 0x20;

@@ -46,8 +46,12 @@ on the cable, or
 while the mouse sleeps).
 This works even while the mouse sleeps.
 .TP
-.B show
+.BR show " [" \-\-json ]
 All current settings, read from the mouse.
+With
+.BR \-\-json ,
+they are printed as one JSON line, for the GUI and scripts.
+The mouse cannot report its buttons or macros, so those are what ajazzctl last wrote.
 .SS Pointer
 .TP
 .BI rate " hz"

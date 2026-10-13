@@ -1,21 +1,24 @@
 # aj179-linux
 
 Linux support for the **Ajazz AJ179** (dual mode) mouse. The official Ajazz software
-only runs on Windows; this project gives you two things on Linux:
+only runs on Windows; this project gives you three things on Linux:
 
 * **`ajazz_daemon`**: a background service that puts the mouse's battery level in your
   status bar (Waybar, Polybar, Eww, ...).
 * **`ajazzctl`**: a command-line tool for every setting of the official driver: DPI,
   report rate, lighting, lift-off distance, Motion Sync, Angle Snap, power options,
   button mapping and macros.
+* **The AJ179 app**: a desktop window for all of the above, styled after the official
+  driver.
 
-Both work over the 2.4 GHz receiver and over the USB cable.
+All of them work over the 2.4 GHz receiver and over the USB cable.
 
 ---
 
 ## Contents
 * [Supported hardware](#supported-hardware)
 * [Installation](#installation)
+* [Desktop app](#desktop-app)
 * [Battery in your status bar](#battery-in-your-status-bar)
 * [Mouse settings: ajazzctl](#mouse-settings-ajazzctl)
 * [How it works](#how-it-works)
@@ -45,23 +48,32 @@ supported either (the official driver cannot configure the mouse over Bluetooth)
 
 ## Installation
 
+### One command
+```bash
+curl -fsSL https://raw.githubusercontent.com/Rockeyxx/aj179-linux/main/install.sh | sudo bash
+```
+This installs everything: the battery service, `ajazzctl` and the AJ179 app, along with
+what they need (gcc, make, PyQt6) through pacman, apt or dnf. Run it again to update.
+
+Prefer one file? Download [`install.sh`](install.sh) and run `sudo bash install.sh`; it
+fetches the rest. For another Ajazz mouse, give its receiver IDs:
+`sudo VENDOR_ID=xxxx PRODUCT_ID=xxxx bash install.sh`.
+
 ### Arch Linux (AUR)
 ```bash
 yay -S aj179-linux-battery-git   # the AUR package keeps its original name
 ```
 
-### Install script
+### From a clone
 ```bash
 git clone https://github.com/Rockeyxx/aj179-linux.git
 cd aj179-linux
 sudo ./install.sh
 ```
-The script installs `gcc` and `make` if needed, builds, installs and starts the service.
-When it asks about custom mouse IDs, answer **no** for the AJ179.
 
 ### Manual
-Install `gcc` and `make` (Arch: `sudo pacman -S gcc make`, Debian/Ubuntu:
-`sudo apt install gcc make`), then:
+Install `gcc` and `make`, and PyQt6 for the app (Arch: `sudo pacman -S gcc make
+python-pyqt6`, Debian/Ubuntu: `sudo apt install gcc make python3-pyqt6`), then:
 ```bash
 make
 sudo make install
@@ -75,11 +87,31 @@ sudo systemctl enable --now ajazz-mouse.service
 |---|---|
 | `/usr/bin/ajazz_daemon` | battery service |
 | `/usr/bin/ajazzctl` | settings tool (`man ajazzctl`) |
+| `/usr/bin/aj179` | the desktop app (also in your launcher as **AJ179**) |
+| `/usr/share/aj179-linux/gui/` | the app's files |
 | `/etc/systemd/system/ajazz-mouse.service` | starts the daemon at boot |
 | `/etc/udev/rules.d/70-ajazz.rules` | lets the logged-in user use the mouse without `sudo` |
 | `/etc/conf.d/ajazz-battery` | receiver USB IDs for the daemon (defaults are right for the AJ179) |
 
-To remove everything: `sudo ./uninstall.sh` (or `sudo make uninstall`).
+To remove everything: `sudo ./uninstall.sh`, or without a clone:
+`curl -fsSL https://raw.githubusercontent.com/Rockeyxx/aj179-linux/main/uninstall.sh | sudo bash`.
+
+---
+
+## Desktop app
+
+![The AJ179 app on its DPI page](docs/images/aj179-app.png)
+
+A window for the battery, DPI stages, report rate and sensor options, lighting, buttons
+and macros, laid out like the official driver. It is installed with everything else
+(see [Installation](#installation)): open **AJ179** from your application launcher, or
+run `aj179`. It makes every change through `ajazzctl`.
+
+* The battery page reads the battery service's file, so the service must be running.
+* The mouse cannot report its buttons or macros; those pages show what was last set
+  from Linux.
+* Over the receiver the mouse must be awake; a page waiting for it says so. Move the
+  mouse and it carries on.
 
 ---
 
@@ -234,9 +266,15 @@ src/        daemon, ajazzctl, protocol and hidraw code
 tests/      unit tests (make test)
 packaging/  systemd unit, udev rule, config
 docs/       PROTOCOL.md, ajazzctl man page
+gui/        the desktop app (PyQt6) and its tests
 ```
 
-`make` builds both programs and `make test` runs the tests. Pull requests are welcome;
+`make` builds both programs and `make test` runs the tests.
+
+To work on the app without installing it, use [uv](https://docs.astral.sh/uv/), which
+fetches PyQt6 into `gui/.venv`: `uv run --project gui gui/ajazz_gui.py` runs it and
+`uv run --project gui pytest gui/tests` runs its tests. `gui/install-desktop-entry.sh`
+adds a launcher entry for this clone, which takes the place of the installed one. Pull requests are welcome;
 please run `make test` first. If you have another Ajazz model, an issue with the output
 of `lsusb` and `ajazzctl info` is a good start.
 

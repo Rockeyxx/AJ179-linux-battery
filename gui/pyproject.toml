@@ -1,0 +1,15 @@
+[project]
+name = "ajazz-gui"
+version = "0.1.0"
+description = "Desktop window for the Ajazz AJ179 mouse"
+requires-python = ">=3.10"
+dependencies = ["PyQt6"]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

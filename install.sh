@@ -1,52 +1,67 @@
 #!/bin/bash
+# Installs aj179-linux: the battery service, ajazzctl and the AJ179 desktop app.
+#
+#   One command:  curl -fsSL https://raw.githubusercontent.com/Rockeyxx/aj179-linux/main/install.sh | sudo bash
+#   One file:     sudo bash install.sh      (downloads the rest)
+#   In a clone:   sudo ./install.sh
+#
+# Another mouse's receiver: sudo VENDOR_ID=xxxx PRODUCT_ID=xxxx bash install.sh
+# Running it again updates an existing install.
 
-set -e
+set -euo pipefail
+
+REPO=https://github.com/Rockeyxx/aj179-linux
+REF=${AJ179_REF:-main} # branch to download when not run from a clone
 
 if [ "$EUID" -ne 0 ]; then
-  echo "Fatal: Deployment requires elevated privileges. Run as root (sudo ./install.sh)."
+  echo "Run as root: sudo bash install.sh (or pipe it to sudo bash)." >&2
   exit 1
 fi
 
-echo "Detecting package manager to install dependencies..."
-if command -v pacman &> /dev/null; then
-    echo "Arch Linux detected. Installing dependencies..."
-    pacman -S --needed gcc make
-elif command -v apt &> /dev/null; then
-    echo "APT-based distribution detected. Installing dependencies..."
-    apt update
-    apt install -y gcc make
+echo "==> Installing dependencies"
+if command -v pacman >/dev/null; then
+  pacman -S --needed --noconfirm gcc make curl python-pyqt6
+elif command -v apt-get >/dev/null; then
+  apt-get update
+  apt-get install -y gcc make curl python3-pyqt6
+elif command -v dnf >/dev/null; then
+  dnf install -y gcc make curl python3-pyqt6
 else
-    echo "Warning: Unsupported package manager. Please install make and gcc manually."
+  echo "Unknown package manager: install gcc, make and PyQt6 for Python 3 yourself." >&2
 fi
 
-echo "Compiling ajazz_daemon using make..."
-if [ -n "$SUDO_USER" ]; then
-    sudo -u "$SUDO_USER" make clean
-    sudo -u "$SUDO_USER" make
+# Use this clone if the script is in one; otherwise (piped from curl, or downloaded on
+# its own) fetch the source. No prompts: when piped, stdin is the script itself.
+here=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true)
+if [ -n "$here" ] && [ -f "$here/src/ajazzctl.c" ]; then
+  src=$here
 else
-    make clean
-    make
+  src=$(mktemp -d)
+  trap 'rm -rf "$src"' EXIT
+  echo "==> Downloading aj179-linux ($REF)"
+  curl -fsSL "$REPO/archive/refs/heads/$REF.tar.gz" | tar -xz -C "$src" --strip-components=1
+fi
+cd "$src"
+
+echo "==> Building"
+if [ "$src" = "$here" ] && [ -n "${SUDO_USER:-}" ]; then
+  sudo -u "$SUDO_USER" make clean all # keep the clone's files owned by its user
+else
+  make clean all
 fi
 
-echo "Installing static files using make install..."
+echo "==> Installing"
 make install
-
-echo "Please click and move your mouse now to wake it up."
-read -p "Press [Enter] once your mouse is awake..."
-
-read -p "Do you want to configure custom mouse IDs? (Default is Ajazz AJ179: 249a/5c2f) [y/N]: " config_choice
-if [[ "$config_choice" =~ ^[Yy]$ ]]; then
-    read -p "Enter Vendor ID (e.g. 249a): " VENDOR_ID
-    read -p "Enter Product ID (e.g. 5c2f): " PRODUCT_ID
-    echo "VENDOR_ID=$VENDOR_ID" > /etc/conf.d/ajazz-battery
-    echo "PRODUCT_ID=$PRODUCT_ID" >> /etc/conf.d/ajazz-battery
-    echo "Configuration saved to /etc/conf.d/ajazz-battery."
+if [ -n "${VENDOR_ID:-}" ] && [ -n "${PRODUCT_ID:-}" ]; then
+  printf 'VENDOR_ID=%s\nPRODUCT_ID=%s\n' "$VENDOR_ID" "$PRODUCT_ID" >/etc/conf.d/ajazz-battery
 fi
 
-echo "Executing state changes..."
+echo "==> Starting the battery service"
 udevadm control --reload-rules && udevadm trigger
 systemctl daemon-reload
-systemctl enable --now ajazz-mouse.service
+systemctl enable ajazz-mouse.service
+systemctl restart ajazz-mouse.service # an update runs the new daemon
 
-echo "Installation complete!"
-echo "The battery status will be written to /tmp/ajazz_battery."
+echo
+echo "Done. Open \"AJ179\" from your application launcher (or run: aj179)."
+echo "Command line: ajazzctl (see: man ajazzctl). Battery level: /tmp/ajazz_battery"
