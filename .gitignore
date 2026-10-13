@@ -10,3 +10,7 @@ ajazz_daemon
 tests/test_protocol
 tests/test_hidraw
 ajazzctl
+
+# GUI virtualenv (uv)
+.venv/
+__pycache__/
