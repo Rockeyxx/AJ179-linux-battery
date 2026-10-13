@@ -83,6 +83,32 @@ def settings_commands(old, new):
             if getattr(old, field) != getattr(new, field)]
 
 
+@dataclass(frozen=True)
+class Lighting:
+    mode: str        # "off", "breathing", "constant" (or a mode the AJ179 does not offer)
+    colour: str      # "#rrggbb", used in constant mode
+    brightness: int  # 0-4
+    speed: int       # 0-4
+
+
+def parse_lighting(text):
+    """`ajazzctl show --json` output -> Lighting, or None if it is not that."""
+    try:
+        light = json.loads(text)["lighting"]
+        return Lighting(str(light["mode"]), str(light["colour"] or "#ff0000"),  # null unless constant
+                        int(light["brightness"]), int(light["speed"]))
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def lighting_commands(old, new):
+    """ajazzctl sets the whole light at once, so any change is one full command."""
+    if old == new:
+        return []
+    colour = [new.colour] if new.mode == "constant" else []
+    return [["lighting", new.mode, *colour, str(new.brightness), str(new.speed)]]
+
+
 class Ctl(QObject):
     """Runs ajazzctl jobs without blocking the window (ajazzctl waits for a sleeping
     mouse). Pages share one Ctl, so jobs run one at a time and never talk to the
@@ -125,7 +151,8 @@ class Ctl(QObject):
             self._next(out)
             return
         err = bytes(self.proc.readAllStandardError()).decode().strip().splitlines()
-        self._finish(False, err[-1] if err else f"ajazzctl failed ({code})")
+        said = out.strip().splitlines()  # read-back mismatches are printed on stdout
+        self._finish(False, err[-1] if err else said[0] if said else f"ajazzctl failed ({code})")
 
     def _error(self, error):
         if error == QProcess.ProcessError.FailedToStart:

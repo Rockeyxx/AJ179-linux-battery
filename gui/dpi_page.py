@@ -1,11 +1,11 @@
 """DPI page: one row per stage."""
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import (QAbstractSpinBox, QButtonGroup, QColorDialog, QFrame,
-                             QGridLayout, QLabel, QPushButton, QRadioButton, QSlider, QSpinBox)
+from PyQt6.QtWidgets import (QAbstractSpinBox, QButtonGroup, QFrame, QGridLayout, QLabel,
+                             QRadioButton, QSlider, QSpinBox)
 
 from ctl import Dpi, dpi_commands, parse_dpi
 from page import DevicePage
+from swatch import Swatch
 
 MIN_DPI, MAX_DPI, STEP = 50, 26000, 50  # PAW3395
 
@@ -14,12 +14,9 @@ class StageRow:
     """The controls for one DPI stage: active, LED colour, slider and value."""
 
     def __init__(self, n, on_change):
-        self.n, self.on_change, self.colour = n, on_change, "#000000"
         self.radio = QRadioButton(str(n))
         self.radio.setAccessibleName(f"Stage {n} active")
-        self.swatch = QPushButton()
-        self.swatch.setObjectName("swatch")
-        self.swatch.setAccessibleName(f"Stage {n} colour")
+        self.swatch = Swatch(f"Stage {n} colour")
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(MIN_DPI // STEP, MAX_DPI // STEP)
         self.slider.setAccessibleName(f"Stage {n} DPI")
@@ -34,18 +31,11 @@ class StageRow:
         self.spin.valueChanged.connect(lambda v: self.slider.setValue(v // STEP))
         self.spin.valueChanged.connect(on_change)
         self.radio.toggled.connect(on_change)
-        self.swatch.clicked.connect(self.pick_colour)
+        self.swatch.changed.connect(on_change)
 
-    def set_colour(self, colour):
-        self.colour = colour
-        self.swatch.setStyleSheet(f"background: {colour};")
-        self.swatch.setToolTip(colour)
-
-    def pick_colour(self):
-        c = QColorDialog.getColor(QColor(self.colour), self.swatch, f"Stage {self.n} colour")
-        if c.isValid():
-            self.set_colour(c.name())
-            self.on_change()
+    @property
+    def colour(self):
+        return self.swatch.colour
 
 
 class DpiPage(DevicePage):
@@ -86,5 +76,5 @@ class DpiPage(DevicePage):
                 self.rows.append(row)
         for row, value, colour in zip(self.rows, dpi.stages, dpi.colours):
             row.spin.setValue(value)
-            row.set_colour(colour)
+            row.swatch.set_colour(colour)
         self.rows[dpi.active - 1].radio.setChecked(True)

@@ -3,7 +3,8 @@ from dataclasses import replace
 from conftest import SHOW
 from PyQt6.QtTest import QSignalSpy
 
-from ctl import Ctl, Dpi, Settings, dpi_commands, parse_dpi, parse_settings, settings_commands
+from ctl import (Ctl, Dpi, Lighting, Settings, dpi_commands, lighting_commands, parse_dpi,
+                 parse_lighting, parse_settings, settings_commands)
 
 DPI = Dpi(5, (400, 800, 1200, 1600, 2400, 3200),
           ("#ff0000", "#0000ff", "#ffff00", "#00ff00", "#00ffff", "#ff00ff"))
@@ -89,3 +90,33 @@ def test_settings_commands_write_only_what_changed():
     assert settings_commands(SETTINGS, new) == [
         ["rate", "500"], ["sensor", "motion-sync", "on"], ["power", "sleep", "60"],
         ["power", "lights-off-on-move", "on"]]
+
+
+LIGHT = Lighting(mode="constant", colour="#ff00ff", brightness=4, speed=0)
+
+
+def test_parse_lighting_reads_mode_colour_brightness_and_speed():
+    assert parse_lighting(SHOW) == LIGHT
+    assert parse_lighting("mouse is asleep - move it") is None
+
+
+def test_lighting_commands_send_one_full_command():
+    assert lighting_commands(LIGHT, LIGHT) == []
+    assert lighting_commands(LIGHT, replace(LIGHT, colour="#00ff00")) == [
+        ["lighting", "constant", "#00ff00", "4", "0"]]
+    assert lighting_commands(LIGHT, replace(LIGHT, mode="breathing", speed=2)) == [
+        ["lighting", "breathing", "4", "2"]]
+
+
+def test_ctl_falls_back_to_stdout_when_ajazzctl_says_nothing_on_stderr(app, tmp_path, monkeypatch):
+    script = tmp_path / "ajazzctl"  # ajazzctl prints read-back mismatches on stdout
+    script.write_text("#!/bin/sh\nprintf 'read-back mismatch\\n  wrote: 02 23\\n'\nexit 1\n")
+    script.chmod(0o755)
+    monkeypatch.setenv("AJAZZCTL", str(script))
+    assert run(Ctl(), [["lighting", "breathing", "2", "3"]]) == [
+        "page", False, "read-back mismatch"]
+
+
+def test_parse_lighting_defaults_the_colour_outside_constant_mode():
+    breathing = SHOW.replace('"mode":"constant","colour":"#ff00ff"', '"mode":"breathing","colour":null')
+    assert parse_lighting(breathing) == Lighting("breathing", "#ff0000", 4, 0)

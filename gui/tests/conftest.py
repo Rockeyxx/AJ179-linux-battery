@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QApplication
 # A real `ajazzctl show --json` line from the AJ179.
 SHOW = ('{"rate":1000,"dpi":{"active":5,"stages":[400,800,1200,1600,2400,3200],'
         '"colours":["#ff0000","#0000ff","#ffff00","#00ff00","#00ffff","#ff00ff"]},'
-        '"lighting":{"mode":"constant","brightness":4,"speed":0},"lod":2,'
+        '"lighting":{"mode":"constant","colour":"#ff00ff","brightness":4,"speed":0},"lod":2,'
         '"motion_sync":false,"angle_snap":false,"power":{"sleep":30,"wake_on_move":0,'
         '"lights_off_on_move":0,"debounce":8},"receiver_fw":"41.01"}\n')
 

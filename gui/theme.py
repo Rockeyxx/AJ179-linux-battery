@@ -35,6 +35,7 @@ QPushButton#tab:disabled {{ color: {MUTED}; }}
 QPushButton#swatch {{ border: 2px solid #ffffff; border-radius: 4px; padding: 0;
     min-width: 30px; max-width: 30px; min-height: 18px; max-height: 18px; }}
 QPushButton#swatch:focus {{ border-color: {RED}; }}
+QPushButton#swatch:disabled {{ border-color: {MUTED}; }}
 
 QRadioButton {{ color: #ffffff; font-family: "Open Sans"; font-size: 10pt; spacing: 8px; }}
 QRadioButton::indicator {{ width: 12px; height: 12px; border-radius: 8px;
@@ -46,8 +47,11 @@ QCheckBox::indicator {{ width: 12px; height: 12px; border-radius: 3px;
 QCheckBox::indicator:checked {{ background: {RED}; border-color: #ffffff; }}
 QSlider::groove:horizontal {{ height: 4px; background: {LINE}; border-radius: 2px; }}
 QSlider::sub-page:horizontal {{ background: {RED}; border-radius: 2px; }}
+QSlider::sub-page:horizontal:disabled {{ background: {MUTED}; }}
 QSlider::handle:horizontal {{ background: #ffffff; width: 14px; margin: -5px 0;
     border-radius: 7px; }}
+QSlider::handle:horizontal:disabled {{ background: {MUTED}; }}
+QRadioButton:disabled, QCheckBox:disabled {{ color: {MUTED}; }}
 QSpinBox {{ color: #ffffff; background: {BLACK}; border: 1px solid {LINE};
     border-radius: 4px; padding: 4px 6px; min-width: 76px;
     font-family: "Open Sans"; font-size: 10pt; }}
