@@ -1,189 +1,246 @@
-# AJ179-linux-battery
-A small C daemon and command-line tool for the **Ajazz AJ179** wireless mouse on Linux. The daemon reads the battery level through the receiver's `hidraw` interface and writes it to a file for status bars like **Waybar**, **Polybar**, or **Eww**. The `ajazzctl` tool changes the mouse settings that the official Windows driver offers.
+# aj179-linux
+
+Linux support for the **Ajazz AJ179** (dual mode) mouse. The official Ajazz software
+only runs on Windows; this project gives you two things on Linux:
+
+* **`ajazz_daemon`**: a background service that puts the mouse's battery level in your
+  status bar (Waybar, Polybar, Eww, ...).
+* **`ajazzctl`**: a command-line tool for every setting of the official driver: DPI,
+  report rate, lighting, lift-off distance, Motion Sync, Angle Snap, power options,
+  button mapping and macros.
+
+Both work over the 2.4 GHz receiver and over the USB cable.
 
 ---
 
-## Table of Contents
-* [Features](#features)
-* [Finding Mouse IDs](#how-to-check-your-mouse-ids)
+## Contents
+* [Supported hardware](#supported-hardware)
 * [Installation](#installation)
-    * [AUR (Arch Linux)](#aur-installation-arch-linux)
-    * [Automatic Installation](#automatic-installation)
-    * [Manual Installation](#manual-installation)
-* [Waybar Integration](#waybar-integration)
-* [Mouse Settings (ajazzctl)](#mouse-settings-ajazzctl)
-* [Technical Notes & Credits](#technical-notes--credits)
+* [Battery in your status bar](#battery-in-your-status-bar)
+* [Mouse settings: ajazzctl](#mouse-settings-ajazzctl)
+* [How it works](#how-it-works)
+* [Troubleshooting](#troubleshooting)
+* [Development](#development)
 
 ---
 
-## Features
-The official Ajazz driver is Windows-only. This Linux alternative:
+## Supported hardware
 
-* **Battery right away**: asks for the battery level when it starts, then listens for the updates the mouse sends on its own. It keeps showing the last level while the mouse sleeps.
+| Connection | USB ID | `lsusb` shows |
+|---|---|---|
+| 2.4 GHz receiver | `249a:5c2f` | XCTECH Wireless-Receiver |
+| USB cable | `248a:5c2e` | Maxxter AJAZZ AJ179 Mouse |
 
-* **Receiver or cable**: uses the USB cable when the mouse is plugged in (the level then shows ⚡ and the Waybar class `charging`) and the 2.4 GHz receiver otherwise. `ajazzctl` follows the same rule; the mouse keeps one set of settings for both.
+Tested on the AJ179 dual mode with the PAW3395 sensor (the model the official
+"AJ179 / AJ179P dual mode" driver is for). To check yours:
 
-* **Leaves the USB device alone**: it uses the kernel's `hidraw` node and never detaches the kernel driver, so it causes no USB re-enumeration.
-
-* **Mouse settings**: report rate, DPI stages and colours, lighting, lift-off distance, Motion Sync, Angle Snap, power options, button mapping and macros (see [ajazzctl](#mouse-settings-ajazzctl)).
-
-* **JSON Output**: Directly formatted for Waybar.
-
----
-
-## How to Check Your Mouse IDs
-
-This daemon defaults to the **Ajazz AJ179** IDs (`VENDOR_ID = 249a`, `PRODUCT_ID = 5c2f`).
-
-If you have a different Ajazz model, you should check your IDs so you can provide them during installation.
-
-To check the ids you need first to have usbutils: 
-
-Arch:
-```Bash
-sudo pacman -S usbutils
+```bash
+lsusb | grep -iE '249a:5c2f|248a:5c2e'
 ```
 
-Debian:
-```Bash
-sudo apt install usbutils
-```
+Other Ajazz models speak different protocols and are not supported. Bluetooth is not
+supported either (the official driver cannot configure the mouse over Bluetooth).
 
-1. Do not plug in your mouse (or dongle) and run:
-```Bash
-lsusb
-```
-2. plug in your mouse and run:
-```Bash
-lsusb
-```
-3. Look for the new device appeared and take the ID for me was:
-
-Bus 001 Device 002: ID **249a:5c2f** XCTECH Wireless-Receiver
-
-The format is ID [VENDOR]:[PRODUCT].
-Vendor ID = 249a
-Product ID = 5c2f
-
- The installer will ask you for these IDs. If you are installing manually or via AUR, simply edit `/etc/conf.d/ajazz-battery` after installation to set your IDs.
- 
 ---
 
 ## Installation
 
-### AUR Installation (Arch Linux)
-you can use AUR. Or the auto installtion if preferred. 
-
+### Arch Linux (AUR)
 ```bash
-yay -S aj179-linux-battery-git
+yay -S aj179-linux-battery-git   # the AUR package keeps its original name
 ```
 
-### Automatic Installation
-The included `install.sh` script automates dependency installation, compilation via `make`, and `systemd` service initialization. It will also interactively ask if you want to configure custom mouse IDs.
-
-1.  Grant execution permissions:
-    ```bash
-    chmod +x install.sh
-    ```
-2.  Execute with elevated privileges:
-    ```bash
-    sudo ./install.sh
-    ```
-*Note: If the daemon fails to read battery state immediately after installation, physically unplug and replug the USB dongle to trigger the new `udev` rules.*
-
----
-### Manual Installation
-For users preferring manual deployment or packaging:
-
-1.  **Install Dependencies:**
-
-Arch:
-```Bash
-sudo pacman -S gcc make
+### Install script
+```bash
+git clone https://github.com/Rockeyxx/aj179-linux.git
+cd aj179-linux
+sudo ./install.sh
 ```
-Debian:
-```Bash
-sudo apt install gcc make
-```
-2.  **Compile & Deploy:**
-    ```bash
-    make
-    sudo make install
-    ```
+The script installs `gcc` and `make` if needed, builds, installs and starts the service.
+When it asks about custom mouse IDs, answer **no** for the AJ179.
 
-3. Setup Configuration
- 
-The `Makefile` will automatically install a universal `udev` rule for Ajazz devices. However, you should update the configuration file if your IDs are different from the AJ179:
-
-```Bash
-sudo nano /etc/conf.d/ajazz-battery
-```
-4. Enable the Daemon (Auto-start)
-Start and enable the installed service:
-
-```Bash
+### Manual
+Install `gcc` and `make` (Arch: `sudo pacman -S gcc make`, Debian/Ubuntu:
+`sudo apt install gcc make`), then:
+```bash
+make
+sudo make install
+sudo udevadm control --reload && sudo udevadm trigger
 sudo systemctl enable --now ajazz-mouse.service
 ```
 
+### What gets installed
+
+| File | Purpose |
+|---|---|
+| `/usr/bin/ajazz_daemon` | battery service |
+| `/usr/bin/ajazzctl` | settings tool (`man ajazzctl`) |
+| `/etc/systemd/system/ajazz-mouse.service` | starts the daemon at boot |
+| `/etc/udev/rules.d/70-ajazz.rules` | lets the logged-in user use the mouse without `sudo` |
+| `/etc/conf.d/ajazz-battery` | receiver USB IDs for the daemon (defaults are right for the AJ179) |
+
+To remove everything: `sudo ./uninstall.sh` (or `sudo make uninstall`).
+
 ---
 
-## Waybar Integration
+## Battery in your status bar
 
-The daemon automatically writes the battery status to /tmp/ajazz_battery. 
+The daemon keeps one line of JSON in `/tmp/ajazz_battery`:
 
-Add this module to your **~/.config/waybar/config**:
+```json
+{"text": "🖱️ 95%", "tooltip": "Ajazz Mouse", "class": "mouse"}
+```
 
-in your("modules-right": [ here ]) or ("modules-left": [ here ]) add "custom/ajazz", then add this below in the config:
+| `class` | Meaning |
+|---|---|
+| `mouse` | running on battery |
+| `charging` | USB cable plugged in; the text shows ⚡ |
+| `disconnected` | neither the receiver nor the cable is plugged in; the text shows `...` |
 
-```JSON
+The level appears as soon as the daemon starts. While the mouse sleeps, the last level
+stays on screen.
+
+### Waybar
+Add `"custom/ajazz"` to `modules-left` or `modules-right` in `~/.config/waybar/config`,
+then add the module:
+
+```json
 "custom/ajazz": {
     "exec": "cat /tmp/ajazz_battery",
     "return-type": "json",
-    "interval": 2,
+    "interval": 5,
     "tooltip": true
 }
 ```
----
 
-## Mouse Settings (ajazzctl)
+Optional styling in `~/.config/waybar/style.css`:
 
-`ajazzctl` is installed next to the daemon and runs as your normal user. Settings only reach the mouse while it is awake, so move it if the tool says it is asleep or idle; it waits and retries. Each change is read back from the mouse to confirm it.
-
-```Bash
-ajazzctl show                          # all current settings
-ajazzctl info                          # device id, sensor, battery
-ajazzctl rate 1000                     # 125, 250, 500 or 1000 Hz
-ajazzctl dpi 2 1600                    # set DPI stage 2
-ajazzctl dpi select 2                  # make stage 2 active
-ajazzctl dpi-colour 2 '#00ff00'        # LED colour of stage 2
-ajazzctl lighting constant '#ff00ff' 4 0   # off | breathing | constant [#RRGGBB] [brightness speed]
-ajazzctl sensor lod 1                  # lift-off distance: 1 = 1 mm, 2 = 2 mm
-ajazzctl sensor motion-sync on
-ajazzctl sensor angle-snap off
-ajazzctl power wake-on-move on
-ajazzctl button 4 key:ctrl+c           # buttons: 1 left (locked) 2 right 3 middle 4 back 5 forward 6 dpi
-ajazzctl macro 5 ctrl+c wait:50 ctrl+v
-ajazzctl buttons reset                 # factory button mapping
+```css
+#custom-ajazz.charging     { color: #a6e3a1; }
+#custom-ajazz.disconnected { opacity: 0.5; }
 ```
 
-Run `ajazzctl` without arguments for the full list. The mouse has no command to read button mappings back, so `ajazzctl` remembers the last mapping it wrote in `~/.config/ajazzctl/buttons`. Button 1 (left click) cannot be remapped, so a mistake can always be undone.
+Polybar, Eww and others can read the same file; the `text` field is what to display.
 
 ---
 
-## Technical Notes & Credits
+## Mouse settings: ajazzctl
 
-### Reverse Engineering
-The protocol was decompiled from the official **AJAZZ Driver (X) 1.0.7.0** and checked against the mouse. [docs/PROTOCOL.md](docs/PROTOCOL.md) documents every command, the code address it came from, and which parts were confirmed on hardware. Firmware update commands are deliberately not implemented.
+`ajazzctl` runs as your normal user. Every change is stored in the mouse itself, so it
+stays after a reboot, and each change is read back from the mouse to confirm it. The full
+reference is in `man ajazzctl`.
 
-### Disclaimer
-* **Experimental:** This utility is an independent implementation and is not affiliated with Ajazz.
-* **Permissions:** The installer deploys a `udev` rule to `/etc/udev/rules.d/` that gives the logged-in user access to the receiver's `hidraw` nodes.
+```text
+$ ajazzctl show
+report rate:  1000 Hz
+dpi stages:   400 800 1200 1600 *2400 3200
+dpi colours:  #ff0000 #0000ff #ffff00 #00ff00 #00ffff #ff00ff
+lighting:     constant, brightness 4, speed 0
+lift-off:     high (2 mm)
+motion sync:  off
+angle snap:   off
+power (raw):  sleep 30, wake-on-move 0, lights-off-on-move 0, debounce 8
+receiver fw:  41.01
 
-### Contributions
-Other Ajazz models are not supported yet. If you have one, the output of `ajazzctl info` and `lsusb` in an **Issue** is a good start, and **Pull Requests** are welcome. Run `make test` before sending changes.
+$ ajazzctl dpi 2 1600
+ok (verified by read-back)
+```
+
+| Command | What it does |
+|---|---|
+| `ajazzctl info` | link (cable or receiver), device id, battery |
+| `ajazzctl show` | all current settings |
+| `ajazzctl rate 1000` | report rate: 125, 250, 500 or 1000 Hz |
+| `ajazzctl dpi 2 1600` | DPI of stage 2 (stages 1–6; 50–26000 in steps of 50) |
+| `ajazzctl dpi select 2` | make stage 2 the active one |
+| `ajazzctl dpi-colour 2 '#00ff00'` | LED colour of stage 2 |
+| `ajazzctl lighting off` | lights off |
+| `ajazzctl lighting breathing 4 2` | breathing; brightness and speed 0–4 |
+| `ajazzctl lighting constant '#00ffff' 4 0` | one colour |
+| `ajazzctl sensor lod 1` | lift-off distance: 1 = 1 mm, 2 = 2 mm |
+| `ajazzctl sensor motion-sync on` | Motion Sync on/off |
+| `ajazzctl sensor angle-snap off` | Angle Snap on/off |
+| `ajazzctl power wake-on-move on` | wake the mouse by moving it |
+| `ajazzctl power lights-off-on-move on` | turn the lights off while moving |
+| `ajazzctl power sleep 30` | sleep time, raw value (factory 30) |
+| `ajazzctl power debounce 8` | button debounce, raw value (factory 8) |
+| `ajazzctl button 4 key:ctrl+c` | remap a button |
+| `ajazzctl buttons reset` | factory button mapping |
+| `ajazzctl macro 5 ctrl+a wait:50 ctrl+c` | put a macro on a button |
+
+**The mouse has to be awake.** Over the receiver, settings only reach the mouse while it
+is in use. If `ajazzctl` prints `mouse is asleep - move it`, move the mouse; it waits and
+then continues. Over the cable the mouse is always awake.
+
+### Buttons
+Buttons are numbered **1** left, **2** right, **3** middle, **4** back (rear side
+button), **5** forward (front side button), **6** DPI. Button 1 cannot be remapped, so
+you can always click your way back. A button can become:
+
+* another mouse button: `left`, `right`, `middle`, `back`, `forward`
+* a wheel step: `scroll-up`, `scroll-down`
+* `dpi-loop` (cycle through the DPI stages, what button 6 does from the factory)
+* a media key: `play-pause`, `stop`, `previous`, `next`, `volume-up`, `volume-down`, `mute`
+* a keyboard key with modifiers: `key:ctrl+c`, `key:super+tab`, `key:f5`, `key:enter`
+
+The mouse cannot report its button mapping, so `ajazzctl` remembers what it last wrote
+in `~/.config/ajazzctl/buttons`. If you changed buttons another way, run
+`ajazzctl buttons reset` first.
+
+### Macros
+`ajazzctl macro <button> <keys...>` stores a key sequence and makes the button play it
+once per press. Each key is pressed and released in order; `wait:N` adds a pause of N
+milliseconds after the previous key:
+
+```bash
+ajazzctl macro 5 ctrl+a wait:50 ctrl+c     # select all, then copy
+ajazzctl macro 4 h e l l o enter           # type "hello" and press Enter
+```
 
 ---
 
-**Developer:** [Rockeyxx](https://github.com/Rockeyxx)
-**Tested Hardware:** Ajazz AJ179
+## How it works
+
+* The receiver and the cable each expose a vendor interface (USB interface 2). Both
+  programs use it through the kernel's `/dev/hidrawN` node, so the kernel driver stays
+  attached and the USB device is never reset.
+* The daemon asks for the battery level when it starts, then listens for the reports
+  the mouse sends on its own. On the cable it re-reads the level every 30 seconds, and it
+  switches between cable and receiver when you plug or unplug.
+* The protocol was decompiled from the official **AJAZZ Driver (X) 1.0.7.0** and checked
+  on the mouse. [docs/PROTOCOL.md](docs/PROTOCOL.md) lists every command, where in the
+  official driver it comes from, and what was confirmed on hardware.
+* Only commands taken from the official driver are ever sent. Firmware updates are not
+  implemented.
+
+---
+
+## Troubleshooting
+
+| Problem | What to do |
+|---|---|
+| `AJ179 not found` | Check `lsusb` (see [Supported hardware](#supported-hardware)). |
+| `Permission denied` on `/dev/hidraw*` | Run `sudo udevadm control --reload && sudo udevadm trigger`, or unplug and replug the receiver. |
+| `mouse is asleep - move it` | Move the mouse; `ajazzctl` continues by itself. |
+| Status bar shows `...` | Check `systemctl status ajazz-mouse` and `journalctl -u ajazz-mouse`. |
+| A button does something unexpected | `ajazzctl buttons reset` |
+
+---
+
+## Development
+
+```text
+src/        daemon, ajazzctl, protocol and hidraw code
+tests/      unit tests (make test)
+packaging/  systemd unit, udev rule, config
+docs/       PROTOCOL.md, ajazzctl man page
+```
+
+`make` builds both programs and `make test` runs the tests. Pull requests are welcome;
+please run `make test` first. If you have another Ajazz model, an issue with the output
+of `lsusb` and `ajazzctl info` is a good start.
+
+---
+
+**Not affiliated with Ajazz.** · **Developer:** [Rockeyxx](https://github.com/Rockeyxx) ·
 **License:** MIT

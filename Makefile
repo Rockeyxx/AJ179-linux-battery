@@ -7,6 +7,7 @@ HEADERS = src/protocol.h src/hidraw.h
 
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
+MANDIR ?= $(PREFIX)/share/man
 SYSTEMD_DIR ?= /etc/systemd/system
 SYSCONFDIR ?= /etc
 UDEV_DIR ?= /etc/udev/rules.d
@@ -22,6 +23,7 @@ $(CTL): src/ajazzctl.c $(COMMON) $(HEADERS)
 install: $(TARGET) $(CTL)
 	install -D -m 755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
 	install -D -m 755 $(CTL) $(DESTDIR)$(BINDIR)/$(CTL)
+	install -D -m 644 docs/ajazzctl.1 $(DESTDIR)$(MANDIR)/man1/ajazzctl.1
 	install -D -m 644 packaging/ajazz-mouse.service $(DESTDIR)$(SYSTEMD_DIR)/ajazz-mouse.service
 	install -D -m 644 packaging/ajazz-battery.conf $(DESTDIR)$(SYSCONFDIR)/conf.d/ajazz-battery
 	install -D -m 644 packaging/70-ajazz.rules $(DESTDIR)$(UDEV_DIR)/70-ajazz.rules
@@ -31,6 +33,7 @@ install: $(TARGET) $(CTL)
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
 	rm -f $(DESTDIR)$(BINDIR)/$(CTL)
+	rm -f $(DESTDIR)$(MANDIR)/man1/ajazzctl.1
 	rm -f $(DESTDIR)$(SYSTEMD_DIR)/ajazz-mouse.service
 	rm -f $(DESTDIR)$(SYSCONFDIR)/conf.d/ajazz-battery
 	rm -f $(DESTDIR)$(UDEV_DIR)/70-ajazz.rules $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules

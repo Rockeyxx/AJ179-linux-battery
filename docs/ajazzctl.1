@@ -1,0 +1,226 @@
+.TH AJAZZCTL 1 2026-10-13 "aj179-linux" "User Commands"
+.SH NAME
+ajazzctl \- read and change the settings of an Ajazz AJ179 mouse
+.SH SYNOPSIS
+.B ajazzctl
+.I command
+.RI [ arguments ]
+.SH DESCRIPTION
+.B ajazzctl
+talks to an Ajazz AJ179 (dual mode) mouse and offers the settings of the
+official Windows driver: report rate, DPI stages and their colours, lighting,
+lift-off distance, Motion Sync, Angle Snap, power options, button mapping and
+macros.
+.PP
+It uses the USB cable when the mouse is plugged in and the 2.4\ GHz receiver
+otherwise.
+Both links reach the same settings; the mouse keeps one set for both.
+.PP
+Every setting is written to the mouse itself, so it stays after a reboot or on
+another computer.
+After each change
+.B ajazzctl
+reads the setting back from the mouse and prints
+.B ok (verified by read-back)
+only if it matches.
+Buttons and macros are the exception: the mouse has no command to read them
+back, so only its acknowledgement is checked.
+.SS Waking the mouse
+Over the receiver, settings only reach the mouse while it is awake and in use.
+If it is asleep or idle,
+.B ajazzctl
+prints
+.B mouse is asleep - move it
+(or
+.BR idle )
+and waits up to five minutes for the mouse to move, then retries.
+Over the cable the mouse is always awake.
+.SH COMMANDS
+.SS Information
+.TP
+.B info
+Device id, sensor, which link is used, and the battery level (marked
+.B charging
+on the cable, or
+.B last reported
+while the mouse sleeps).
+This works even while the mouse sleeps.
+.TP
+.B show
+All current settings, read from the mouse.
+.SS Pointer
+.TP
+.BI rate " hz"
+Report (polling) rate:
+.BR 125 ", " 250 ", " 500 " or " 1000 .
+.TP
+.BI dpi " stage value"
+Set the DPI of
+.I stage
+(1\(en6).
+Values are rounded down to a multiple of 50 and kept within the sensor's range
+(50\(en26000 for the AJ179's PAW3395).
+.TP
+.BI "dpi select" " stage"
+Make
+.I stage
+the active one.
+.TP
+.BI dpi-colour " stage #RRGGBB"
+LED colour shown for
+.I stage
+(1\(en6).
+.SS Lighting
+.TP
+.B lighting off
+.TQ
+.BR "lighting breathing " [ \fIbrightness speed\fR ]
+.TQ
+.BR "lighting constant " [ \fI#RRGGBB\fR "] [" \fIbrightness speed\fR ]
+Lighting effect.
+.I brightness
+and
+.I speed
+are 0\(en4; when left out the current values are kept.
+.B constant
+uses red when no colour is given.
+.B breathing
+cycles through the seven fixed colours the official driver uses.
+.SS Sensor
+.TP
+.BR "sensor lod " 1 | 2
+Lift-off distance: 1\ mm or 2\ mm.
+.TP
+.BR "sensor motion-sync " on | off
+.TQ
+.BR "sensor angle-snap " on | off
+.SS Power
+.TP
+.BR "power wake-on-move " on | off
+.TQ
+.BR "power lights-off-on-move " on | off
+.TP
+.BI "power sleep" " raw"
+.TQ
+.BI "power debounce" " raw"
+Sleep time and button debounce as the raw value the mouse stores (1\(en255).
+Their units are not decoded yet; the factory values are
+.B sleep 30
+and
+.BR "debounce 8" .
+.SS Buttons
+Buttons are numbered
+.B 1
+left,
+.B 2
+right,
+.B 3
+middle,
+.B 4
+back (rear side button),
+.B 5
+forward (front side button),
+.B 6
+DPI.
+Button 1 cannot be remapped, so the mouse can always be used to undo a mistake.
+.TP
+.BI button " number function"
+Give button 2\(en6 a new
+.IR function :
+.RS
+.TP
+.BR left ", " right ", " middle ", " back ", " forward
+mouse buttons
+.TP
+.BR scroll-up ", " scroll-down
+one wheel step
+.TP
+.B dpi-loop
+cycle through the DPI stages (factory function of button 6)
+.TP
+.BR play-pause ", " stop ", " previous ", " next ", " volume-up ", " volume-down ", " mute
+media keys
+.TP
+.BI key: combination
+a keyboard key with optional modifiers, e.g.
+.BR key:ctrl+c ,
+.BR key:super+tab ,
+.BR key:f5 .
+Modifiers:
+.BR ctrl ", " shift ", " alt ", " super .
+Keys:
+.BR a \(en z ,
+.BR 0 \(en 9 ,
+.BR f1 \(en f12 ,
+.BR enter ", " esc ", " tab ", " space ", " backspace .
+.RE
+.TP
+.B buttons reset
+Restore the factory mapping.
+.SS Macros
+.TP
+.BI macro " number token" ...
+Store a macro and make button
+.I number
+(2\(en6) play it once per press.
+Each
+.I token
+is either a key combination in the same form as
+.B key:
+above but without the prefix, which is pressed and released, or
+.BI wait: ms
+to pause after the previous key (1\(en65535 ms; 10 ms otherwise).
+A macro holds up to 101 key events; a key with two modifiers uses six.
+.SS Diagnostics
+.TP
+.BI read " cmd"
+Send one raw read command and print the 32-byte reply in hex.
+Only the known read commands are accepted:
+.BR 10 ", " 12 ", " 13 ", " 14 ", " 15 ", " 16 ", " 17 ", " 20 .
+.SH EXAMPLES
+.nf
+ajazzctl show
+ajazzctl dpi 2 1600
+ajazzctl dpi select 2
+ajazzctl lighting constant \(aq#00ffff\(aq 2 0
+ajazzctl sensor motion-sync on
+ajazzctl button 4 key:ctrl+c
+ajazzctl macro 5 ctrl+a wait:50 ctrl+c
+ajazzctl buttons reset
+.fi
+.SH FILES
+.TP
+.I ~/.config/ajazzctl/buttons
+The last button mapping written, one button per line (or under
+.BR $XDG_CONFIG_HOME ).
+.B ajazzctl
+changes one button at a time but always sends all six, so this file must match
+the mouse; delete it and run
+.B buttons reset
+if in doubt.
+.TP
+.I /dev/hidraw*
+The mouse's vendor interface.
+The installed udev rule gives the logged-in user access.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Mouse not found, no reply, or the read-back did not match.
+.TP
+.B 2
+Invalid command or argument.
+.SH NOTES
+Firmware updates are not supported and never sent.
+The protocol is described in
+.I docs/PROTOCOL.md
+in the source repository.
+.SH SEE ALSO
+.BR ajazz_daemon ,
+which writes the battery level to
+.I /tmp/ajazz_battery
+for status bars.
+.PP
+https://github.com/Rockeyxx/aj179-linux
