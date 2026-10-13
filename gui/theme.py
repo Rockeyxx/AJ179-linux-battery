@@ -1,4 +1,7 @@
 """Colours and style sheet: the AJAZZ driver's red and black, drawn in code."""
+from pathlib import Path
+
+ICONS = (Path(__file__).parent / "icons").as_posix()
 BLACK = "#1e1e1e"
 SIDEBAR = "#25262b"
 CARD = "#2c2f35"
@@ -56,5 +59,14 @@ QSpinBox {{ color: #ffffff; background: {BLACK}; border: 1px solid {LINE};
     border-radius: 4px; padding: 4px 6px; min-width: 76px;
     font-family: "Open Sans"; font-size: 10pt; }}
 QSpinBox:focus {{ border-color: {RED}; }}
+QComboBox, QLineEdit {{ color: #ffffff; background: {BLACK}; border: 1px solid {LINE};
+    border-radius: 4px; padding: 4px 8px; font-family: "Open Sans"; font-size: 10pt; }}
+QComboBox {{ min-width: 170px; }}
+QComboBox:focus, QLineEdit:focus {{ border-color: {RED}; }}
+QComboBox:disabled {{ color: {MUTED}; }}
+QComboBox::drop-down {{ border: none; width: 22px; }}
+QComboBox::down-arrow {{ image: url({ICONS}/chevron-down.svg); width: 12px; height: 12px; }}
+QComboBox QAbstractItemView {{ color: #ffffff; background: {CARD}; border: 1px solid {LINE};
+    selection-background-color: {DARK_RED}; }}
 QToolTip {{ color: #ffffff; background: {CARD}; border: 1px solid {LINE}; }}
 """

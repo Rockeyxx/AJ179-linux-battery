@@ -15,6 +15,7 @@ from PyQt6.QtGui import (QColor, QKeySequence, QLinearGradient, QPainter, QPen,
 from PyQt6.QtWidgets import (QApplication, QButtonGroup, QFrame, QHBoxLayout, QLabel,
                              QProgressBar, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
 
+from buttons_page import ButtonsPage
 from ctl import Ctl
 from dpi_page import DpiPage
 from lighting_page import LightingPage
@@ -152,9 +153,10 @@ class MainWindow(QWidget):
 
         self.ctl = Ctl()  # shared: one ajazzctl job at a time
         self.dpi = DpiPage(self.ctl)
+        self.buttons = ButtonsPage(self.ctl)
         self.lighting = LightingPage(self.ctl)
         self.settings = SettingsPage(self.ctl)
-        self.page_for = {"Home": self._home_page(), "DPI": self.dpi,
+        self.page_for = {"Home": self._home_page(), "DPI": self.dpi, "Buttons": self.buttons,
                          "Lighting": self.lighting, "Settings": self.settings}
         self.pages = QStackedWidget()
         for page in self.page_for.values():

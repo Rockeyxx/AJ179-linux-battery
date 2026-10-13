@@ -109,6 +109,21 @@ def lighting_commands(old, new):
     return [["lighting", new.mode, *colour, str(new.brightness), str(new.speed)]]
 
 
+def parse_buttons(text):
+    """`ajazzctl show --json` output -> the six button functions, or None."""
+    try:
+        names = tuple(str(b) for b in json.loads(text)["buttons"])
+    except (ValueError, KeyError, TypeError):
+        return None
+    return names if len(names) == 6 else None
+
+
+def button_commands(old, new):
+    """Commands for the buttons that changed; button 1 (left click) is locked."""
+    return [["button", str(n), b]
+            for n, (a, b) in enumerate(zip(old, new), 1) if n > 1 and a != b]
+
+
 class Ctl(QObject):
     """Runs ajazzctl jobs without blocking the window (ajazzctl waits for a sleeping
     mouse). Pages share one Ctl, so jobs run one at a time and never talk to the

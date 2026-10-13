@@ -3,8 +3,9 @@ from dataclasses import replace
 from conftest import SHOW
 from PyQt6.QtTest import QSignalSpy
 
-from ctl import (Ctl, Dpi, Lighting, Settings, dpi_commands, lighting_commands, parse_dpi,
-                 parse_lighting, parse_settings, settings_commands)
+from ctl import (Ctl, Dpi, Lighting, Settings, button_commands, dpi_commands,
+                 lighting_commands, parse_buttons, parse_dpi, parse_lighting, parse_settings,
+                 settings_commands)
 
 DPI = Dpi(5, (400, 800, 1200, 1600, 2400, 3200),
           ("#ff0000", "#0000ff", "#ffff00", "#00ff00", "#00ffff", "#ff00ff"))
@@ -120,3 +121,17 @@ def test_ctl_falls_back_to_stdout_when_ajazzctl_says_nothing_on_stderr(app, tmp_
 def test_parse_lighting_defaults_the_colour_outside_constant_mode():
     breathing = SHOW.replace('"mode":"constant","colour":"#ff00ff"', '"mode":"breathing","colour":null')
     assert parse_lighting(breathing) == Lighting("breathing", "#ff0000", 4, 0)
+
+
+FACTORY = ("left", "right", "middle", "back", "forward", "dpi-loop")
+
+
+def test_parse_buttons_reads_the_six_functions():
+    assert parse_buttons(SHOW) == FACTORY
+    assert parse_buttons('{"buttons": ["left"]}') is None
+
+
+def test_button_commands_set_changed_buttons_but_never_the_left_one():
+    new = ("right", "right", "middle", "scroll-up", "forward", "key:ctrl+c")
+    assert button_commands(FACTORY, new) == [
+        ["button", "4", "scroll-up"], ["button", "6", "key:ctrl+c"]]

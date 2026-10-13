@@ -67,7 +67,7 @@ def test_sidebar_lists_every_feature_with_the_built_ones_ready(app, tmp_path):
     win = MainWindow(tmp_path / "none")
     assert [b.text() for b in win.tabs] == [
         "Home", "DPI", "Buttons", "Lighting", "Macro", "Settings"]
-    assert [b.isEnabled() for b in win.tabs] == [True, True, False, True, False, True]
+    assert [b.isEnabled() for b in win.tabs] == [True, True, True, True, False, True]
     assert win.tabs[0].isChecked()
 
 
