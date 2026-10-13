@@ -1,2 +1,12 @@
 # Compiled output
 ajazz_daemon
+
+# Claude Code
+.claude/
+
+# Vendor driver download and reverse-engineering workspace (proprietary, never commit)
+/AJAZZ_*/
+/re/
+tests/test_protocol
+tests/test_hidraw
+ajazzctl

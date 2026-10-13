@@ -10,13 +10,13 @@ fi
 echo "Detecting package manager to install dependencies..."
 if command -v pacman &> /dev/null; then
     echo "Arch Linux detected. Installing dependencies..."
-    pacman -S --needed libusb gcc make
+    pacman -S --needed gcc make
 elif command -v apt &> /dev/null; then
     echo "APT-based distribution detected. Installing dependencies..."
     apt update
-    apt install -y libusb-1.0-0-dev gcc make
+    apt install -y gcc make
 else
-    echo "Warning: Unsupported package manager. Please install libusb, make, and gcc manually."
+    echo "Warning: Unsupported package manager. Please install make and gcc manually."
 fi
 
 echo "Compiling ajazz_daemon using make..."
