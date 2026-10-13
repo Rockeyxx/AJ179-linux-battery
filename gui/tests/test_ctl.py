@@ -149,3 +149,13 @@ def test_macro_commands_upload_changed_macros_only():
     new = ("", "", "", "ctrl+c wait:50 ctrl+v", "", "")
     assert macro_commands(old, new) == [["macro", "4", "ctrl+c", "wait:50", "ctrl+v"]]
     assert macro_commands(old, ("",) * 6) == []  # an empty macro is never uploaded
+
+
+def test_ctl_says_when_the_installed_ajazzctl_is_too_old(app, tmp_path, monkeypatch):
+    script = tmp_path / "ajazzctl"  # an ajazzctl without show --json prints its usage
+    script.write_text("#!/bin/sh\necho 'usage: ajazzctl info | show' >&2\n"
+                      "echo '       ajazzctl read <cmd-hex>' >&2\nexit 2\n")
+    script.chmod(0o755)
+    monkeypatch.setenv("AJAZZCTL", str(script))
+    assert run(Ctl(), [["show", "--json"]]) == [
+        "page", False, "ajazzctl is too old for this app - run: sudo make install"]

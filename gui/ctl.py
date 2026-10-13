@@ -181,6 +181,9 @@ class Ctl(QObject):
             self._next(out)
             return
         err = bytes(self.proc.readAllStandardError()).decode().strip().splitlines()
+        if any(line.startswith("usage:") for line in err):  # it lacks a command we use
+            self._finish(False, "ajazzctl is too old for this app - run: sudo make install")
+            return
         said = out.strip().splitlines()  # read-back mismatches are printed on stdout
         self._finish(False, err[-1] if err else said[0] if said else f"ajazzctl failed ({code})")
 

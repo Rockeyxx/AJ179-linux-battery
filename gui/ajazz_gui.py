@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer
-from PyQt6.QtGui import (QColor, QKeySequence, QLinearGradient, QPainter, QPen,
+from PyQt6.QtGui import (QColor, QIcon, QKeySequence, QLinearGradient, QPainter, QPen,
                          QPolygonF, QShortcut)
 from PyQt6.QtWidgets import (QApplication, QButtonGroup, QFrame, QHBoxLayout, QLabel,
                              QProgressBar, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
@@ -25,6 +25,7 @@ from settings_page import SettingsPage
 from theme import BLACK, BLUE, STYLE
 
 STATUS_FILE = Path("/tmp/ajazz_battery")
+ICON = Path(__file__).parent / "icons" / "aj179.svg"
 
 STATE_TEXT = {
     "mouse": "On battery",
@@ -278,6 +279,8 @@ class MainWindow(QWidget):
 
 def main():
     app = QApplication(sys.argv)
+    app.setDesktopFileName("aj179")  # Wayland app id, matching aj179.desktop
+    app.setWindowIcon(QIcon(str(ICON)))
     win = MainWindow()
     win.show()
     return app.exec()
