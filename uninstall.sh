@@ -19,7 +19,7 @@ else
     echo "Makefile not found, attempting manual fallback cleanup..."
     rm -f /usr/local/bin/ajazz_daemon
     rm -f /etc/systemd/system/ajazz-mouse.service
-    rm -f /etc/udev/rules.d/99-ajazz.rules
+    rm -f /etc/udev/rules.d/70-ajazz.rules /etc/udev/rules.d/99-ajazz.rules
     rm -f /etc/conf.d/ajazz-battery
 fi
 

@@ -11,7 +11,7 @@ with captured traffic · **[open]** not yet resolved.
 | Mode | VID:PID | Config interface | Device type (app) |
 |---|---|---|---|
 | 2.4 GHz receiver | `249A:5C2F` | MI_02 (`hidraw` on `:1.2`) | 105, dev_id `M179` or `M603` |
-| Wired | `248A:5C2E` / `5D2E` / `5E2E` | MI_02 | 105 (not implemented yet) |
+| USB cable | `248A:5C2E` / `5D2E` / `5E2E` | MI_02 (same descriptor) | 105; same protocol, verified on `5C2E` |
 
 Source: `config.xml`, `device/mouse_aj179.xml`. Interface 2 has no report IDs:
 32-byte input, 32-byte output.
@@ -49,6 +49,10 @@ Live behaviour (2026-10-13) **[wire]** — our implementation differs from the v
   not connected (immediate). Only `0x10` is answered by the receiver itself; everything
   else needs the mouse awake and active. Wait ≥ 3 s for a reply.
 - Reply lengths can differ from the write: `0x13` reports `len 0x19`, `0x17` `len 5`.
+- Over the USB cable every command is answered by the mouse in ~2 ms; there is no idle
+  or asleep status. The receiver then reports the mouse as not connected (info byte 14 = 0).
+- Cable and receiver share one set of settings: a stage-6 colour written over the cable
+  (`#ff00fe`) read back unchanged through the receiver after unplugging.
 
 ## Status frames [code]
 
@@ -105,10 +109,10 @@ and carry a valid checksum in byte 31.
 |---|---|---|
 | 1 | `00` = OK | 0x44b510 **[code+wire]** |
 | 4..7 | device id, 4 ASCII chars: `M179` | 0x44c190 **[code+wire]** |
-| 8..9 | 16-bit LE, stored at UI+0x87f (`00 00` here) **[open]** | 0x431460 |
+| 8..9 | `41 01` over the cable, `00 00` via the receiver — likely the mouse firmware version (41.01) **[wire, meaning inferred]** | 0x431460 |
 | 10 | **sensor id**: `0x95` = PAW3395 (selects DPI range and encoding) | 0x431477 **[code+wire]** |
 | 11 | rate capability, `0x01` here; the app maps `0x10`→4 options, `0x20`→6, `0x40`→7, else 5 **[open]** | 0x43178b |
-| 12 | charging flag (2nd arg of `SetBatteryInfo`) **[code, meaning inferred]** | 0x4317ba |
+| 12 | charging: `01` with the cable plugged in, `00` on battery | 0x4317ba **[code+wire]** |
 | 13 | **battery %**, still reported while the mouse sleeps | 0x4317ba **[code+wire]** |
 | 14 | wireless mouse connected; 0 = asleep / out of range (app logs "无线设备未连接", *wireless device not connected*, and skips the settings sync) | 0x431807 **[code+wire]** |
 

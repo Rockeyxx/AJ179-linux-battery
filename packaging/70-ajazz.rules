@@ -1,0 +1,4 @@
+# AJ179 2.4 GHz receiver
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="249a", TAG+="uaccess"
+# AJ179 over the USB cable (product ids from the vendor driver config.xml)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="248a", ATTRS{idProduct}=="5c2e|5d2e|5e2e", TAG+="uaccess"

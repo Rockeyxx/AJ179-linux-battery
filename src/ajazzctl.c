@@ -19,12 +19,15 @@ static void print_hex(const uint8_t *b, int n) {
     printf("%02x%c", b[i], i == n - 1 ? '\n' : ' ');
 }
 
+static int via_cable;
+
+// Uses the USB cable when plugged in, otherwise the 2.4 GHz receiver.
 static int open_receiver(void) {
   char path[64];
   int fd;
 
-  if (ajz_find_hidraw("/sys", VENDOR_ID, PRODUCT_ID, path, sizeof(path)) != 0) {
-    fprintf(stderr, "receiver %04x:%04x not found (is usbhid bound to interface 2?)\n",
+  if (ajz_find_mouse("/sys", VENDOR_ID, PRODUCT_ID, path, sizeof(path), &via_cable) != 0) {
+    fprintf(stderr, "AJ179 not found: no USB cable connection and no receiver %04x:%04x\n",
             VENDOR_ID, PRODUCT_ID);
     return -1;
   }
@@ -100,6 +103,7 @@ static int cmd_info(int fd) {
     fprintf(stderr, "reply is not a device-info report\n");
     return 1;
   }
+  printf("link:      %s\n", via_cable ? "USB cable" : "2.4 GHz receiver");
   printf("device id: %s\n", info.id);
   printf("sensor:    0x%02x\n", info.sensor);
   printf("rate caps: 0x%02x\n", info.rate_caps);

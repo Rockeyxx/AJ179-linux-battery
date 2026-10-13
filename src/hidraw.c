@@ -63,6 +63,21 @@ int ajz_find_hidraw(const char *sysfs, uint16_t vid, uint16_t pid, char *path,
   return ret;
 }
 
+// AJ179 over the USB cable (vendor driver config.xml, device type 105).
+static const uint16_t wired_ids[][2] = {
+    {0x248a, 0x5c2e}, {0x248a, 0x5d2e}, {0x248a, 0x5e2e}};
+
+int ajz_find_mouse(const char *sysfs, uint16_t vid, uint16_t pid, char *path,
+                   size_t size, int *wired) {
+  for (size_t i = 0; i < sizeof(wired_ids) / sizeof(wired_ids[0]); i++)
+    if (ajz_find_hidraw(sysfs, wired_ids[i][0], wired_ids[i][1], path, size) == 0) {
+      *wired = 1;
+      return 0;
+    }
+  *wired = 0;
+  return ajz_find_hidraw(sysfs, vid, pid, path, size);
+}
+
 int ajz_transact(int fd, const uint8_t req[AJZ_REPORT_LEN],
                  uint8_t reply[AJZ_REPORT_LEN]) {
   uint8_t out[AJZ_REPORT_LEN + 1] = {0}; // leading 0 = no report id
