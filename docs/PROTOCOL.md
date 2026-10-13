@@ -178,8 +178,11 @@ ajazzctl sends it twice when the mode changes.
 ### 0x07 — set power and debounce [code] (0x4359bb)
 `07 00 01 04 <sleep_light> <move_wakeup> <move_closelight> <button_respond_time>`
 
-Units of `sleep_light` and `button_respond_time` **[open]** (XML default sleep 30;
-read the current values with `0x17`).
+`sleep_light` counts in **10-second steps** [code]: the settings page fills its sleep list
+(0x43ca40) with "10 Sec"/"30 Sec"/"1..30 Min" items whose values are 1, 3, 6, 12, 30, 60,
+120, 180, and sends the value unchanged (0x435800). Factory 30 = 5 minutes.
+`button_respond_time` is the debounce in ms: a number box clamped to **0..20** (0x41fbbc,
+`mov eax, 20` / `cmovg`), factory 8.
 
 ### 0x08 — upload macro [code] (0x433ed0, serializer 0x41cc90)
 Payload = `<slot>` + 4 bytes per event; `slot` = the button index the macro is bound to.
@@ -207,7 +210,7 @@ even though button 5's bytes follow — replicate exactly.) Factory table:
 | 0x10 | mouse button | mask (as above); scroll left/right `00 F5` / `00 F6` |
 | 0x20 | wheel | `01` up / `FF` down |
 | 0x30 | repeat ("fire") | count, interval |
-| 0x40 | DPI | `01`, `02`, `03` (loop / + / − — which is which **[open]**) |
+| 0x40 | DPI | `01` loop, `02` up, `03` down **[wire]**: with `02`/`03` on the DPI button, one press moved stage 3 to 4 / 2 (2026-10-13). The official app only offers loop. |
 | 0x60 | special | `04`, `01`; `00 00` = disabled **[open]** |
 | 0x70 | keyboard | modifier mask, HID usage |
 | 0x80 | consumer | 16-bit LE usage (`CD` play, `B5` next, `B6` prev, `B7` stop, `E9` vol+, `EA` vol−, `E2` mute, `0183` player, `0192` calculator, `0194` my computer, `0223` web, `018A` mail, `6F`/`70` brightness) |

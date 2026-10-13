@@ -108,6 +108,8 @@ and macros, laid out like the official driver. It is installed with everything e
 run `aj179`. It makes every change through `ajazzctl`.
 
 * The battery page reads the battery service's file, so the service must be running.
+* **Low-battery notification:** the Home page turns it on or off and sets the level
+  (20 % by default). A small background service sends it, so it works with the app closed.
 * The mouse cannot report its buttons or macros; those pages show what was last set
   from Linux.
 * Over the receiver the mouse must be awake; a page waiting for it says so. Move the

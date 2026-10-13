@@ -57,3 +57,11 @@ def test_factory_layout_resets_the_controls(app, fake_ctl):
     page.factory_button.click()
     assert page.rows[3].combo.currentData() == "back"
     assert not page.apply_button.isEnabled()
+
+
+def test_the_dpi_button_can_step_dpi_up_or_down(app, fake_ctl):
+    page = loaded_page()
+    assert page.rows[5].combo.findData("dpi-down") >= 0
+    choose(page.rows[5], "dpi-up")
+    wait(page, page.apply)
+    assert fake_ctl.calls()[-2:] == ["button 6 dpi-up", "show --json"]

@@ -10,6 +10,7 @@ BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man
 DATADIR ?= $(PREFIX)/share
 APPDIR = $(DATADIR)/aj179-linux/gui
+USERUNITDIR ?= $(PREFIX)/lib/systemd/user
 SYSTEMD_DIR ?= /etc/systemd/system
 SYSCONFDIR ?= /etc
 UDEV_DIR ?= /etc/udev/rules.d
@@ -37,6 +38,11 @@ install: $(TARGET) $(CTL)
 	install -m 644 gui/icons/*.svg $(DESTDIR)$(APPDIR)/icons/
 	printf '#!/bin/sh\nexec python3 %s/ajazz_gui.py "$$@"\n' '$(APPDIR)' > $(DESTDIR)$(BINDIR)/aj179
 	chmod 755 $(DESTDIR)$(BINDIR)/aj179
+	# the low-battery notification, a per-user service
+	printf '#!/bin/sh\nexec python3 %s/alert.py "$$@"\n' '$(APPDIR)' > $(DESTDIR)$(BINDIR)/aj179-battery-alert
+	chmod 755 $(DESTDIR)$(BINDIR)/aj179-battery-alert
+	install -d $(DESTDIR)$(USERUNITDIR)
+	sed 's|@BINDIR@|$(BINDIR)|' packaging/aj179-battery-alert.service > $(DESTDIR)$(USERUNITDIR)/aj179-battery-alert.service
 	install -D -m 644 packaging/aj179.desktop $(DESTDIR)$(DATADIR)/applications/aj179.desktop
 	install -D -m 644 gui/icons/aj179.svg $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/aj179.svg
 
@@ -48,6 +54,7 @@ uninstall:
 	rm -f $(DESTDIR)$(SYSCONFDIR)/conf.d/ajazz-battery
 	rm -f $(DESTDIR)$(UDEV_DIR)/70-ajazz.rules $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules
 	rm -f $(DESTDIR)$(BINDIR)/aj179 $(DESTDIR)$(DATADIR)/applications/aj179.desktop
+	rm -f $(DESTDIR)$(BINDIR)/aj179-battery-alert $(DESTDIR)$(USERUNITDIR)/aj179-battery-alert.service
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/aj179.svg
 	rm -rf $(DESTDIR)$(DATADIR)/aj179-linux
 

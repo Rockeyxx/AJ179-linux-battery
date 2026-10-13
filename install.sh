@@ -20,12 +20,12 @@ fi
 
 echo "==> Installing dependencies"
 if command -v pacman >/dev/null; then
-  pacman -S --needed --noconfirm gcc make curl python-pyqt6
+  pacman -S --needed --noconfirm gcc make curl python-pyqt6 libnotify
 elif command -v apt-get >/dev/null; then
   apt-get update
-  apt-get install -y gcc make curl python3-pyqt6
+  apt-get install -y gcc make curl python3-pyqt6 libnotify-bin
 elif command -v dnf >/dev/null; then
-  dnf install -y gcc make curl python3-pyqt6
+  dnf install -y gcc make curl python3-pyqt6 libnotify
 else
   echo "Unknown package manager: install gcc, make and PyQt6 for Python 3 yourself." >&2
 fi
@@ -61,6 +61,10 @@ udevadm control --reload-rules && udevadm trigger
 systemctl daemon-reload
 systemctl enable ajazz-mouse.service
 systemctl restart ajazz-mouse.service # an update runs the new daemon
+systemctl --global enable aj179-battery-alert.service # low-battery notification, every user
+if [ -n "${SUDO_USER:-}" ]; then # start it now for whoever ran this, not just at next login
+  systemctl --user -M "$SUDO_USER@" restart aj179-battery-alert.service 2>/dev/null || true
+fi
 
 echo
 echo "Done. Open \"AJ179\" from your application launcher (or run: aj179)."

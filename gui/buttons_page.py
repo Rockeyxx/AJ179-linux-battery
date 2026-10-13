@@ -13,6 +13,7 @@ FACTORY = ("left", "right", "middle", "back", "forward", "dpi-loop")
 FUNCTIONS = (("left", "Left click"), ("right", "Right click"), ("middle", "Middle click"),
              ("back", "Back"), ("forward", "Forward"), ("scroll-up", "Scroll up"),
              ("scroll-down", "Scroll down"), ("dpi-loop", "DPI cycle"),
+             ("dpi-up", "DPI up"), ("dpi-down", "DPI down"),
              ("play-pause", "Play / pause"), ("stop", "Stop"), ("previous", "Previous track"),
              ("next", "Next track"), ("volume-up", "Volume up"), ("volume-down", "Volume down"),
              ("mute", "Mute"), ("key", "Keyboard shortcut"))

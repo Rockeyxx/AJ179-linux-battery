@@ -220,8 +220,9 @@ static int cmd_show(int fd, int json) {
          sens[4] == 1 ? "low (1 mm)" : sens[4] == 2 ? "high (2 mm)" : "?");
   printf("motion sync:  %s\n", sens[5] ? "on" : "off");
   printf("angle snap:   %s\n", sens[6] ? "on" : "off");
-  printf("power (raw):  sleep %d, wake-on-move %d, lights-off-on-move %d, debounce %d\n",
-         power[4], power[5], power[6], power[7]);
+  printf("power:        sleep after %d s, debounce %d ms, wake-on-move %d, "
+         "lights-off-on-move %d\n",
+         power[4] * 10, power[7], power[5], power[6]);
   printf("buttons:     ");
   for (int i = 0; i < 6; i++)
     printf(" %s", button_label(keys[i], name, sizeof(name)));
@@ -371,21 +372,24 @@ static int cmd_dpi_colour(int fd, const char *a, const char *b) {
   return apply(fd, req, 0x14, 18);
 }
 
-// "power sleep|debounce <raw>" or "power wake-on-move|lights-off-on-move on|off".
-// Raw units are not decoded yet (factory values: sleep 30, debounce 8).
+// "power sleep <10 s steps>", "power debounce <ms>" or
+// "power wake-on-move|lights-off-on-move on|off". The official app offers sleep
+// 1, 3, 6, 12, 30, 60, 120, 180 (10 s .. 30 min; factory 30 = 5 min) and clamps
+// debounce to 0..20 ms (factory 8).
 static int cmd_power(int fd, const char *what, const char *value) {
   uint8_t req[AJZ_REPORT_LEN], r[AJZ_REPORT_LEN];
   int v = atoi(value), on = strcmp(value, "on") == 0;
+  int number = *value && value[strspn(value, "0123456789")] == '\0';
 
   if (do_read(fd, 0x17, r) != 0)
     return 1;
-  if (strcmp(what, "sleep") == 0 && v >= 1 && v <= 255)
+  if (strcmp(what, "sleep") == 0 && number && v >= 1 && v <= 255)
     r[4] = v;
   else if (strcmp(what, "wake-on-move") == 0)
     r[5] = on;
   else if (strcmp(what, "lights-off-on-move") == 0)
     r[6] = on;
-  else if (strcmp(what, "debounce") == 0 && v >= 1 && v <= 255)
+  else if (strcmp(what, "debounce") == 0 && number && v <= 20)
     r[7] = v;
   else
     return 2;
@@ -549,11 +553,13 @@ static int usage(void) {
           "       ajazzctl lighting off|breathing|constant [#RRGGBB] [brightness speed]\n"
           "       ajazzctl dpi-colour <stage> #RRGGBB\n"
           "       ajazzctl sensor lod 1|2 | sensor motion-sync|angle-snap on|off\n"
-          "       ajazzctl power sleep|debounce <raw> | power wake-on-move|lights-off-on-move on|off\n"
+          "       ajazzctl power sleep <10 s steps> | power debounce <0-20 ms>\n"
+          "       ajazzctl power wake-on-move|lights-off-on-move on|off\n"
           "       ajazzctl button <2-6> <function> | buttons reset\n"
           "         buttons: 1 left (locked) 2 right 3 middle 4 back 5 forward 6 dpi\n"
           "         functions: left right middle back forward scroll-up scroll-down\n"
-          "           dpi-loop play-pause stop previous next volume-up volume-down mute\n"
+          "           dpi-loop dpi-up dpi-down play-pause stop previous next volume-up\n"
+          "           volume-down mute\n"
           "           key:[ctrl+][shift+][alt+][super+]<a-z|0-9|f1-f12|enter|esc|tab|space|backspace>\n"
           "       ajazzctl macro <2-6> <[mod+]key|wait:ms>...  e.g. macro 4 ctrl+c wait:50 ctrl+v\n"
           "       ajazzctl read <cmd-hex>   (10 12 13 14 15 16 17 20)\n");

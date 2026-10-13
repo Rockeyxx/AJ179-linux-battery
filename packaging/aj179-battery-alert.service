@@ -1,0 +1,9 @@
+[Unit]
+Description=AJ179 low-battery notification
+
+[Service]
+ExecStart=@BINDIR@/aj179-battery-alert
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
