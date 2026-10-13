@@ -13,7 +13,8 @@ SHOW = ('{"rate":1000,"dpi":{"active":5,"stages":[400,800,1200,1600,2400,3200],'
         '"lighting":{"mode":"constant","colour":"#ff00ff","brightness":4,"speed":0},"lod":2,'
         '"motion_sync":false,"angle_snap":false,"power":{"sleep":30,"wake_on_move":0,'
         '"lights_off_on_move":0,"debounce":8},'
-        '"buttons":["left","right","middle","back","forward","dpi-loop"],"receiver_fw":"41.01"}\n')
+        '"buttons":["left","right","middle","back","forward","dpi-loop"],"macros":{},'
+        '"receiver_fw":"41.01"}\n')
 
 # Stands in for ajazzctl: logs its arguments, prints $FAKE_SHOW for "show --json",
 # and fails like a sleeping mouse when its arguments equal $FAKE_FAIL.

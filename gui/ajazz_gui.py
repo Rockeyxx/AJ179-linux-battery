@@ -19,6 +19,7 @@ from buttons_page import ButtonsPage
 from ctl import Ctl
 from dpi_page import DpiPage
 from lighting_page import LightingPage
+from macro_page import MacroPage
 from page import DevicePage
 from settings_page import SettingsPage
 from theme import BLACK, BLUE, STYLE
@@ -155,9 +156,11 @@ class MainWindow(QWidget):
         self.dpi = DpiPage(self.ctl)
         self.buttons = ButtonsPage(self.ctl)
         self.lighting = LightingPage(self.ctl)
+        self.macro = MacroPage(self.ctl)
         self.settings = SettingsPage(self.ctl)
         self.page_for = {"Home": self._home_page(), "DPI": self.dpi, "Buttons": self.buttons,
-                         "Lighting": self.lighting, "Settings": self.settings}
+                         "Lighting": self.lighting, "Macro": self.macro,
+                         "Settings": self.settings}
         self.pages = QStackedWidget()
         for page in self.page_for.values():
             self.pages.addWidget(page)

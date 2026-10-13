@@ -4,8 +4,8 @@ from conftest import SHOW
 from PyQt6.QtTest import QSignalSpy
 
 from ctl import (Ctl, Dpi, Lighting, Settings, button_commands, dpi_commands,
-                 lighting_commands, parse_buttons, parse_dpi, parse_lighting, parse_settings,
-                 settings_commands)
+                 lighting_commands, macro_commands, parse_buttons, parse_dpi, parse_lighting,
+                 parse_macros, parse_settings, settings_commands)
 
 DPI = Dpi(5, (400, 800, 1200, 1600, 2400, 3200),
           ("#ff0000", "#0000ff", "#ffff00", "#00ff00", "#00ffff", "#ff00ff"))
@@ -135,3 +135,17 @@ def test_button_commands_set_changed_buttons_but_never_the_left_one():
     new = ("right", "right", "middle", "scroll-up", "forward", "key:ctrl+c")
     assert button_commands(FACTORY, new) == [
         ["button", "4", "scroll-up"], ["button", "6", "key:ctrl+c"]]
+
+
+def test_parse_macros_gives_each_buttons_text():
+    assert parse_macros(SHOW) == ("",) * 6
+    with_macro = SHOW.replace('"macros":{}', '"macros":{"4":"ctrl+c wait:50 ctrl+v"}')
+    assert parse_macros(with_macro)[3] == "ctrl+c wait:50 ctrl+v"
+    assert parse_macros('{"rate": 1000}') is None
+
+
+def test_macro_commands_upload_changed_macros_only():
+    old = ("", "", "", "a", "", "")
+    new = ("", "", "", "ctrl+c wait:50 ctrl+v", "", "")
+    assert macro_commands(old, new) == [["macro", "4", "ctrl+c", "wait:50", "ctrl+v"]]
+    assert macro_commands(old, ("",) * 6) == []  # an empty macro is never uploaded

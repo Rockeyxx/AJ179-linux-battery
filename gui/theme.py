@@ -68,5 +68,10 @@ QComboBox::drop-down {{ border: none; width: 22px; }}
 QComboBox::down-arrow {{ image: url({ICONS}/chevron-down.svg); width: 12px; height: 12px; }}
 QComboBox QAbstractItemView {{ color: #ffffff; background: {CARD}; border: 1px solid {LINE};
     selection-background-color: {DARK_RED}; }}
+QListWidget {{ color: #ffffff; background: {BLACK}; border: 1px solid {LINE};
+    border-radius: 4px; padding: 4px; font-family: "Open Sans"; font-size: 10pt; }}
+QListWidget:focus {{ border-color: {RED}; }}
+QListWidget::item {{ padding: 3px 6px; }}
+QListWidget::item:selected {{ background: {DARK_RED}; color: #ffffff; }}
 QToolTip {{ color: #ffffff; background: {CARD}; border: 1px solid {LINE}; }}
 """

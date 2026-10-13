@@ -124,6 +124,21 @@ def button_commands(old, new):
             for n, (a, b) in enumerate(zip(old, new), 1) if n > 1 and a != b]
 
 
+def parse_macros(text):
+    """`ajazzctl show --json` output -> each button's macro text ("" for none), or None."""
+    try:
+        macros = json.loads(text)["macros"]
+        return tuple(str(macros.get(str(n), "")) for n in range(1, 7))
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return None
+
+
+def macro_commands(old, new):
+    """Upload each changed, non-empty macro; that also makes its button play it."""
+    return [["macro", str(n), *b.split()]
+            for n, (a, b) in enumerate(zip(old, new), 1) if b and a != b]
+
+
 class Ctl(QObject):
     """Runs ajazzctl jobs without blocking the window (ajazzctl waits for a sleeping
     mouse). Pages share one Ctl, so jobs run one at a time and never talk to the
