@@ -81,6 +81,8 @@ LED colour shown for
 .BR "lighting breathing " [ \fIbrightness speed\fR ]
 .TQ
 .BR "lighting constant " [ \fI#RRGGBB\fR "] [" \fIbrightness speed\fR ]
+.TQ
+.BR "lighting neon " [ \fIbrightness speed\fR ]
 Lighting effect.
 .I brightness
 and
@@ -90,6 +92,8 @@ are 0\(en4; when left out the current values are kept.
 uses red when no colour is given.
 .B breathing
 cycles through the seven fixed colours the official driver uses.
+.B neon
+is a rainbow that keeps changing colour; the official driver hides it for the AJ179.
 .SS Sensor
 .TP
 .BR "sensor lod " 1 | 2

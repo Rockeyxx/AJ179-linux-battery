@@ -158,8 +158,12 @@ AJ179 dual mode: 125–1000 Hz only (info byte 11 = `0x10`), default `0x01`.
 | 3 | 5 | `R G B` |
 
 Modes: 0 off, 1 flowing, 2 breathing, 3 constant, 4 neon, 5 colour wave. 0/2/3 are
-**[code+wire]** (match captured traffic); 1/4/5 inferred from the XML `light_N` order and
-disabled for the AJ179. Brightness and speed are 0–4 each.
+**[code+wire]** (match captured traffic); 1/4/5 come from the XML `light_N` order, and the
+official app disables them for the AJ179. Brightness and speed are 0–4 each.
+
+Hidden modes on the AJ179 **[wire, 2026-10-13]**: all three are accepted and read back,
+but only **neon (4)** shows an effect — a rainbow that keeps changing colour. Flowing (1)
+looked like a constant light and colour wave (5) turned the light off. ajazzctl offers neon.
 
 **Changing the mode takes two writes** [wire, 2026-10-13]: a `0x05` write that changes
 the mode only switches it — the mouse brings back that mode's saved brightness, speed

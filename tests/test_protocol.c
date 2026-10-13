@@ -246,10 +246,26 @@ static void test_set_lighting_packets(void) {
   CHECK(f[31] == 0x3f);
 }
 
+// The modes the official app hides for the AJ179 (0x434690 payload table):
+// flowing carries one zero byte after brightness/speed, neon and wave none.
+static void test_set_lighting_hidden_modes(void) {
+  const uint8_t flowing[] = {0x05, 0x00, 0x01, 0x03, 0x01, 0x42, 0x00};
+  const uint8_t neon[] = {0x05, 0x00, 0x01, 0x02, 0x04, 0x42};
+  const uint8_t wave[] = {0x05, 0x00, 0x01, 0x02, 0x05, 0x42};
+  uint8_t f[AJZ_REPORT_LEN];
+
+  CHECK(ajz_set_lighting(f, AJZ_LIGHT_FLOWING, 4, 2, NULL) == 0);
+  CHECK(memcmp(f, flowing, sizeof(flowing)) == 0);
+  CHECK(ajz_set_lighting(f, AJZ_LIGHT_NEON, 4, 2, NULL) == 0);
+  CHECK(memcmp(f, neon, sizeof(neon)) == 0);
+  CHECK(ajz_set_lighting(f, AJZ_LIGHT_WAVE, 4, 2, NULL) == 0);
+  CHECK(memcmp(f, wave, sizeof(wave)) == 0);
+}
+
 static void test_set_lighting_rejects_unsupported(void) {
   uint8_t f[AJZ_REPORT_LEN];
 
-  CHECK(ajz_set_lighting(f, 1, 4, 2, NULL) == -1); // flowing: disabled on AJ179
+  CHECK(ajz_set_lighting(f, 6, 4, 2, NULL) == -1); // no such mode
   CHECK(ajz_set_lighting(f, AJZ_LIGHT_OFF, 5, 2, NULL) == -1);
   CHECK(ajz_set_lighting(f, AJZ_LIGHT_OFF, 4, 5, NULL) == -1);
 }
@@ -454,6 +470,7 @@ int main(void) {
   test_report_rate_flags();
   test_set_rate_packet();
   test_set_lighting_packets();
+  test_set_lighting_hidden_modes();
   test_set_lighting_rejects_unsupported();
   test_set_sensor_packet();
   test_set_buttons_factory_table();

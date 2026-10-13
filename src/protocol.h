@@ -23,8 +23,11 @@ struct ajz_info {
 };
 
 #define AJZ_LIGHT_OFF 0
+#define AJZ_LIGHT_FLOWING 1
 #define AJZ_LIGHT_BREATHING 2
 #define AJZ_LIGHT_CONSTANT 3
+#define AJZ_LIGHT_NEON 4
+#define AJZ_LIGHT_WAVE 5
 
 int ajz_dpi_encode(uint8_t sensor, int dpi);
 int ajz_dpi_decode(uint8_t sensor, int raw);

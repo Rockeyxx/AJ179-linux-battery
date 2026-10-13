@@ -145,7 +145,13 @@ int ajz_set_lighting(uint8_t f[AJZ_REPORT_LEN], int mode, int brightness,
 
   switch (mode) {
   case AJZ_LIGHT_OFF:
+  case AJZ_LIGHT_NEON:
+  case AJZ_LIGHT_WAVE:
     ajz_build(f, 0x05, 0x01, 2, p, 2);
+    return 0;
+  case AJZ_LIGHT_FLOWING:
+    p[2] = 0;
+    ajz_build(f, 0x05, 0x01, 3, p, 3);
     return 0;
   case AJZ_LIGHT_CONSTANT:
     if (!rgb)
@@ -159,7 +165,7 @@ int ajz_set_lighting(uint8_t f[AJZ_REPORT_LEN], int mode, int brightness,
     ajz_build(f, 0x05, 0x01, 0x18, p, sizeof(p));
     return 0;
   default:
-    return -1; // flowing / neon / wave are disabled for the AJ179
+    return -1;
   }
 }
 
