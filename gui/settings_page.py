@@ -1,9 +1,13 @@
 """Settings page: report rate, sensor and power options."""
-from PyQt6.QtWidgets import (QAbstractSpinBox, QButtonGroup, QCheckBox, QFrame, QGridLayout,
-                             QHBoxLayout, QLabel, QRadioButton, QSpinBox)
+from PyQt6.QtWidgets import (QAbstractSpinBox, QButtonGroup, QCheckBox, QComboBox, QFrame,
+                             QGridLayout, QHBoxLayout, QLabel, QRadioButton, QSpinBox)
 
 from ctl import Settings, parse_settings, settings_commands
 from page import DevicePage
+
+# The official app's sleep choices: the mouse counts in steps of 10 seconds.
+SLEEP_CHOICES = ((1, "10 s"), (3, "30 s"), (6, "1 min"), (12, "2 min"), (30, "5 min"),
+                 (60, "10 min"), (120, "20 min"), (180, "30 min"))
 
 
 class SettingsPage(DevicePage):
@@ -14,8 +18,12 @@ class SettingsPage(DevicePage):
         self.lods = self._choices("Lift-off distance", [(1, "Low (1 mm)"), (2, "High (2 mm)")])
         self.motion_sync = self._check("Motion sync")
         self.angle_snap = self._check("Angle snap")
-        self.debounce = self._spin("Debounce time", " ms")
-        self.sleep = self._spin("Sleep after", " s")
+        self.debounce = self._spin("Debounce time", " ms", 0, 20)  # the official app's range
+        self.sleep = QComboBox()
+        self.sleep.setAccessibleName("Sleep after")
+        for value, text in SLEEP_CHOICES:
+            self.sleep.addItem(text, value)
+        self.sleep.currentIndexChanged.connect(self._changed)
         self.wake_on_move = self._check("Wake up when moved")
         self.lights_off_on_move = self._check("Turn lights off when moving")
 
@@ -64,9 +72,9 @@ class SettingsPage(DevicePage):
         box.toggled.connect(self._changed)
         return box
 
-    def _spin(self, name, suffix):
+    def _spin(self, name, suffix, low, high):
         spin = QSpinBox()
-        spin.setRange(1, 255)  # what ajazzctl accepts
+        spin.setRange(low, high)
         spin.setSuffix(suffix)
         spin.setKeyboardTracking(False)
         spin.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
@@ -83,7 +91,7 @@ class SettingsPage(DevicePage):
     def current(self):
         return Settings(self.rates.checkedId(), self.lods.checkedId(),
                         self.motion_sync.isChecked(), self.angle_snap.isChecked(),
-                        self.debounce.value(), self.sleep.value(),
+                        self.debounce.value(), self.sleep.currentData(),
                         self.wake_on_move.isChecked(), self.lights_off_on_move.isChecked())
 
     def show_value(self, s):
@@ -93,6 +101,8 @@ class SettingsPage(DevicePage):
         self.motion_sync.setChecked(s.motion_sync)
         self.angle_snap.setChecked(s.angle_snap)
         self.debounce.setValue(s.debounce)
-        self.sleep.setValue(s.sleep)
+        if self.sleep.findData(s.sleep) < 0:  # set some other way: still show it
+            self.sleep.addItem(f"{s.sleep * 10} s", s.sleep)
+        self.sleep.setCurrentIndex(self.sleep.findData(s.sleep))
         self.wake_on_move.setChecked(s.wake_on_move)
         self.lights_off_on_move.setChecked(s.lights_off_on_move)

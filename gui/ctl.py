@@ -47,8 +47,8 @@ class Settings:
     lod: int                   # lift-off distance: 1 = 1 mm, 2 = 2 mm
     motion_sync: bool
     angle_snap: bool
-    debounce: int              # ms going by the default of 8 (units unconfirmed)
-    sleep: int                 # s going by the default of 30 (units unconfirmed)
+    debounce: int              # ms, 0-20 in the official app (default 8)
+    sleep: int                 # steps of 10 s (default 30 = 5 min)
     wake_on_move: bool
     lights_off_on_move: bool
 

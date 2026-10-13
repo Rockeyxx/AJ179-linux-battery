@@ -178,8 +178,11 @@ ajazzctl sends it twice when the mode changes.
 ### 0x07 — set power and debounce [code] (0x4359bb)
 `07 00 01 04 <sleep_light> <move_wakeup> <move_closelight> <button_respond_time>`
 
-Units of `sleep_light` and `button_respond_time` **[open]** (XML default sleep 30;
-read the current values with `0x17`).
+`sleep_light` counts in **10-second steps** [code]: the settings page fills its sleep list
+(0x43ca40) with "10 Sec"/"30 Sec"/"1..30 Min" items whose values are 1, 3, 6, 12, 30, 60,
+120, 180, and sends the value unchanged (0x435800). Factory 30 = 5 minutes.
+`button_respond_time` is the debounce in ms: a number box clamped to **0..20** (0x41fbbc,
+`mov eax, 20` / `cmovg`), factory 8.
 
 ### 0x08 — upload macro [code] (0x433ed0, serializer 0x41cc90)
 Payload = `<slot>` + 4 bytes per event; `slot` = the button index the macro is bound to.
