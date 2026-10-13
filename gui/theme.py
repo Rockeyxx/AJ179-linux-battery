@@ -16,6 +16,7 @@ QLabel {{ color: {GREY}; font-family: "Open Sans"; font-size: 10pt; }}
 QLabel#title {{ color: {RED}; font-size: 15pt; font-weight: 600; }}
 QLabel#heading {{ color: #ffffff; font-size: 15pt; font-weight: 600; }}
 QLabel#caption {{ font-size: 8pt; font-weight: 600; }}
+QLabel#name {{ color: #ffffff; }}
 QLabel#percent {{ color: #ffffff; font-size: 32pt; font-weight: 600; }}
 QFrame#accent {{ background: {RED}; }}
 QFrame#card {{ background: {CARD}; border-radius: 8px; }}
@@ -39,6 +40,10 @@ QRadioButton {{ color: #ffffff; font-family: "Open Sans"; font-size: 10pt; spaci
 QRadioButton::indicator {{ width: 12px; height: 12px; border-radius: 8px;
     border: 2px solid {GREY}; }}
 QRadioButton::indicator:checked {{ background: {RED}; border-color: #ffffff; }}
+QCheckBox {{ color: #ffffff; font-family: "Open Sans"; font-size: 10pt; spacing: 8px; }}
+QCheckBox::indicator {{ width: 12px; height: 12px; border-radius: 3px;
+    border: 2px solid {GREY}; }}
+QCheckBox::indicator:checked {{ background: {RED}; border-color: #ffffff; }}
 QSlider::groove:horizontal {{ height: 4px; background: {LINE}; border-radius: 2px; }}
 QSlider::sub-page:horizontal {{ background: {RED}; border-radius: 2px; }}
 QSlider::handle:horizontal {{ background: #ffffff; width: 14px; margin: -5px 0;

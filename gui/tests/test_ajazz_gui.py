@@ -63,11 +63,11 @@ def test_window_shows_battery_and_keeps_last_good_state(app, tmp_path):
     assert win.battery.value() == 89
 
 
-def test_sidebar_lists_every_feature_with_only_home_and_dpi_ready(app, tmp_path):
+def test_sidebar_lists_every_feature_with_the_built_ones_ready(app, tmp_path):
     win = MainWindow(tmp_path / "none")
     assert [b.text() for b in win.tabs] == [
         "Home", "DPI", "Buttons", "Lighting", "Macro", "Settings"]
-    assert [b.isEnabled() for b in win.tabs] == [True, True, False, False, False, False]
+    assert [b.isEnabled() for b in win.tabs] == [True, True, False, False, False, True]
     assert win.tabs[0].isChecked()
 
 
@@ -78,3 +78,12 @@ def test_choosing_dpi_shows_and_loads_the_dpi_page(app, tmp_path, fake_ctl):
     assert win.pages.currentWidget() is win.dpi
     assert spy.wait(5000)
     assert len(win.dpi.rows) == 6
+
+
+def test_choosing_settings_shows_and_loads_the_settings_page(app, tmp_path, fake_ctl):
+    win = MainWindow(tmp_path / "none")
+    spy = QSignalSpy(win.ctl.done)
+    win.tabs[5].click()
+    assert win.pages.currentWidget() is win.settings
+    assert spy.wait(5000)
+    assert win.settings.rates.checkedId() == 1000

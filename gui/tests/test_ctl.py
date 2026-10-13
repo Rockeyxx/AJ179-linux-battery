@@ -3,7 +3,7 @@ from dataclasses import replace
 from conftest import SHOW
 from PyQt6.QtTest import QSignalSpy
 
-from ctl import Ctl, Dpi, dpi_commands, parse_dpi
+from ctl import Ctl, Dpi, Settings, dpi_commands, parse_dpi, parse_settings, settings_commands
 
 DPI = Dpi(5, (400, 800, 1200, 1600, 2400, 3200),
           ("#ff0000", "#0000ff", "#ffff00", "#00ff00", "#00ffff", "#ff00ff"))
@@ -68,3 +68,24 @@ def test_ctl_runs_jobs_one_at_a_time_and_names_who_asked(app, fake_ctl):
         assert spy.wait(5000)
     assert [spy[i][0] for i in range(2)] == ["dpi page", "settings page"]
     assert fake_ctl.calls() == ["dpi 2 900", "show --json"]
+
+
+SETTINGS = Settings(rate=1000, lod=2, motion_sync=False, angle_snap=False,
+                    debounce=8, sleep=30, wake_on_move=False, lights_off_on_move=False)
+
+
+def test_parse_settings_reads_rate_sensor_and_power():
+    assert parse_settings(SHOW) == SETTINGS
+
+
+def test_parse_settings_rejects_garbage():
+    assert parse_settings("mouse is asleep - move it") is None
+    assert parse_settings('{"rate": 1000}') is None
+
+
+def test_settings_commands_write_only_what_changed():
+    assert settings_commands(SETTINGS, SETTINGS) == []
+    new = replace(SETTINGS, rate=500, motion_sync=True, sleep=60, lights_off_on_move=True)
+    assert settings_commands(SETTINGS, new) == [
+        ["rate", "500"], ["sensor", "motion-sync", "on"], ["power", "sleep", "60"],
+        ["power", "lights-off-on-move", "on"]]

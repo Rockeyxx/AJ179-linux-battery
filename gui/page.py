@@ -76,6 +76,6 @@ class DevicePage(QWidget):
         self.message.setText("Saved" if self.saving else "")
         self._changed()
 
-    def _changed(self):
+    def _changed(self, *_):  # also a slot for the controls' change signals
         self.apply_button.setEnabled(
             not self.busy and self.value is not None and self.current() != self.value)

@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (QApplication, QButtonGroup, QFrame, QHBoxLayout, QL
 
 from ctl import Ctl
 from dpi_page import DpiPage
+from page import DevicePage
+from settings_page import SettingsPage
 from theme import BLACK, BLUE, STYLE
 
 STATUS_FILE = Path("/tmp/ajazz_battery")
@@ -147,11 +149,13 @@ class MainWindow(QWidget):
         self.setStyleSheet(STYLE)
         self.setFixedSize(860, 540)  # a fixed size makes tiling compositors float it
 
-        self.pages = QStackedWidget()
-        self.pages.addWidget(self._home_page())
         self.ctl = Ctl()  # shared: one ajazzctl job at a time
         self.dpi = DpiPage(self.ctl)
-        self.pages.addWidget(self.dpi)
+        self.settings = SettingsPage(self.ctl)
+        self.page_for = {"Home": self._home_page(), "DPI": self.dpi, "Settings": self.settings}
+        self.pages = QStackedWidget()
+        for page in self.page_for.values():
+            self.pages.addWidget(page)
 
         title = QLabel("AJ179")
         title.setObjectName("title")
@@ -177,7 +181,7 @@ class MainWindow(QWidget):
             tab = QPushButton(name)
             tab.setObjectName("tab")
             tab.setCheckable(True)
-            if i >= self.pages.count():
+            if name not in self.page_for:
                 tab.setEnabled(False)
                 tab.setToolTip("Coming soon")
                 tab.setAccessibleDescription("Coming soon")
@@ -241,11 +245,11 @@ class MainWindow(QWidget):
         return page
 
     def _show_page(self, i):
-        self.pages.setCurrentIndex(i)
-        # Read the mouse when DPI opens, unless that would throw away unsaved edits.
-        if i == self.pages.indexOf(self.dpi) and not self.dpi.busy \
-                and not self.dpi.apply_button.isEnabled():
-            self.dpi.load()
+        page = self.page_for[FEATURES[i]]
+        self.pages.setCurrentWidget(page)
+        # Read the mouse when a page opens, unless that would throw away unsaved edits.
+        if isinstance(page, DevicePage) and not page.busy and not page.apply_button.isEnabled():
+            page.load()
 
     def refresh(self):
         status = read_status(self.path)
