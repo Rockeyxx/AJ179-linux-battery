@@ -3,19 +3,18 @@
 
 Reads the status file the ajazz-mouse daemon writes; it never talks to the mouse.
 """
-import json
-import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import (QColor, QIcon, QKeySequence, QLinearGradient, QPainter, QPen,
                          QPolygonF, QShortcut)
-from PyQt6.QtWidgets import (QApplication, QButtonGroup, QFrame, QHBoxLayout, QLabel,
-                             QProgressBar, QPushButton, QScrollArea, QStackedWidget,
-                             QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (QAbstractSpinBox, QApplication, QButtonGroup, QCheckBox, QFrame,
+                             QHBoxLayout, QLabel, QProgressBar, QPushButton, QScrollArea,
+                             QSpinBox, QStackedWidget, QVBoxLayout, QWidget)
 
+from alert import alert_file, load_config, save_config
+from battery import STATUS_FILE, Status, parse_status, read_status  # noqa: F401 (tests)
 from buttons_page import ButtonsPage
 from ctl import Ctl
 from dpi_page import DpiPage
@@ -25,7 +24,6 @@ from page import DevicePage
 from settings_page import SettingsPage
 from theme import BLACK, BLUE, STYLE
 
-STATUS_FILE = Path("/tmp/ajazz_battery")
 ICON = Path(__file__).parent / "icons" / "aj179.svg"
 
 STATE_TEXT = {
@@ -36,39 +34,6 @@ STATE_TEXT = {
 }
 
 FEATURES = ("Home", "DPI", "Buttons", "Lighting", "Macro", "Settings")
-
-
-@dataclass(frozen=True)
-class Status:
-    state: str          # a STATE_TEXT key
-    level: int | None   # 0-100, None when unknown
-
-
-def parse_status(text):
-    """Daemon JSON -> Status, or None when the text is empty or half-written."""
-    try:
-        data = json.loads(text)
-    except ValueError:
-        return None
-    if not isinstance(data, dict):
-        return None
-    state = data.get("class")
-    if state == "disconnected":
-        return Status(state, None)
-    m = re.search(r"(\d+)%", str(data.get("text", "")))
-    if state not in ("mouse", "charging") or not m:
-        return None
-    return Status(state, int(m.group(1)))
-
-
-def read_status(path=STATUS_FILE):
-    try:
-        text = Path(path).read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return Status("no-service", None)
-    except (OSError, ValueError):
-        return None
-    return parse_status(text)
 
 
 class BatteryBar(QProgressBar):
@@ -215,6 +180,7 @@ class MainWindow(QWidget):
         self.scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.scroll.viewport().setAutoFillBackground(False)
         self.scroll.setWidget(inner)
+        inner.setAutoFillBackground(False)  # setWidget turns it on: keep the theme's black
         root = QHBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -266,14 +232,41 @@ class MainWindow(QWidget):
         row.addLayout(text)
         row.addStretch()
 
+        # Low-battery notification: a background service reads these settings.
+        enabled, threshold = load_config(alert_file())
+        self.alert = QCheckBox("Notify me when the battery is low")
+        self.alert.setChecked(enabled)
+        self.alert_level = QSpinBox()
+        self.alert_level.setRange(5, 50)
+        self.alert_level.setSuffix(" %")
+        self.alert_level.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+        self.alert_level.setAccessibleName("Low battery level")
+        self.alert_level.setValue(threshold)
+        self.alert_level.setEnabled(enabled)
+        self.alert.toggled.connect(self._save_alert)
+        self.alert_level.valueChanged.connect(self._save_alert)
+        alert = QHBoxLayout()
+        alert.setSpacing(12)
+        alert.addWidget(self.alert)
+        alert.addWidget(QLabel("at"))
+        alert.addWidget(self.alert_level)
+        alert.addStretch()
+
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(heading)
         layout.addSpacing(10)
         layout.addWidget(card)
+        layout.addSpacing(14)
+        layout.addLayout(alert)
+        layout.addWidget(QLabel("Works in the background, even with this window closed."))
         layout.addStretch()
         return page
+
+    def _save_alert(self, *_):
+        self.alert_level.setEnabled(self.alert.isChecked())
+        save_config(alert_file(), self.alert.isChecked(), self.alert_level.value())
 
     def _show_page(self, i):
         page = self.page_for[FEATURES[i]]

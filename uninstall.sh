@@ -11,6 +11,10 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 systemctl disable --now ajazz-mouse.service 2>/dev/null || true
+systemctl --global disable aj179-battery-alert.service 2>/dev/null || true
+if [ -n "${SUDO_USER:-}" ]; then
+  systemctl --user -M "$SUDO_USER@" stop aj179-battery-alert.service 2>/dev/null || true
+fi
 
 # The files `make install` puts in place (PREFIX=/usr), plus old locations.
 rm -f /usr/bin/ajazz_daemon /usr/bin/ajazzctl /usr/bin/aj179 \
@@ -20,6 +24,7 @@ rm -f /usr/bin/ajazz_daemon /usr/bin/ajazzctl /usr/bin/aj179 \
   /etc/udev/rules.d/70-ajazz.rules /etc/udev/rules.d/99-ajazz.rules \
   /usr/share/applications/aj179.desktop \
   /usr/share/icons/hicolor/scalable/apps/aj179.svg \
+  /usr/bin/aj179-battery-alert /usr/lib/systemd/user/aj179-battery-alert.service \
   /usr/local/bin/ajazz_daemon
 rm -rf /usr/share/aj179-linux
 

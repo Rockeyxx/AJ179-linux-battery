@@ -101,3 +101,27 @@ def test_window_tiles_and_every_page_fits_a_half_screen_tile(app, tmp_path, fake
     room = 953 - win.sidebar.width() - left - right
     for name, page in win.page_for.items():
         assert page.minimumSizeHint().width() <= room, name
+
+
+def test_home_page_toggles_the_low_battery_alert(app, tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    win = MainWindow(tmp_path / "none")
+    assert win.alert.isChecked() and win.alert_level.value() == 20
+    win.alert.setChecked(False)
+    win.alert_level.setValue(15)
+    assert (tmp_path / "ajazzctl" / "battery-alert").read_text() == "enabled=0\nthreshold=15\n"
+
+
+def test_pages_stay_dark_under_a_light_system_theme(app, tmp_path):
+    from PyQt6.QtGui import QColor, QPalette
+    from theme import BLACK
+    old = app.palette()
+    app.setPalette(QPalette(QColor("white")))
+    try:
+        win = MainWindow(tmp_path / "none")
+        win.resize(860, 540)
+        win.show()
+        app.processEvents()
+        assert win.grab().toImage().pixelColor(850, 530).name() == BLACK  # empty page area
+    finally:
+        app.setPalette(old)
