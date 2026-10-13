@@ -4,19 +4,26 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "hidraw.h"
 #include "protocol.h"
 
+#ifndef OUTPUT_FILE
 #define OUTPUT_FILE "/tmp/ajazz_battery"
+#endif
 #define RETRY_SECONDS 2
+#define CHECK_SECONDS 30 // look for a plugged / pulled cable; refresh while wired
 
 int running = 1;
+uint16_t vendor_id = 0x249a;
+uint16_t product_id = 0x5c2f;
 
 // --- PROTOTYPES ---
-int query_battery(int fd);
-void watch_receiver(int fd);
+void report_battery(int fd);
+void watch_mouse(int fd, const char *path, int wired);
 void write_status(int bat_level, const char *class_name);
 
 void handle_sig(int sig) {
@@ -28,8 +35,6 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, handle_sig);
   signal(SIGTERM, handle_sig);
 
-  uint16_t vendor_id = 0x249a;
-  uint16_t product_id = 0x5c2f;
   char path[64];
 
   if (argc >= 3) {
@@ -43,13 +48,13 @@ int main(int argc, char *argv[]) {
   write_status(-1, "disconnected");
 
   while (running) {
-    int fd = -1;
+    int fd = -1, wired;
 
-    if (ajz_find_hidraw("/sys", vendor_id, product_id, path, sizeof(path)) == 0)
+    if (ajz_find_mouse("/sys", vendor_id, product_id, path, sizeof(path), &wired) == 0)
       fd = open(path, O_RDWR);
 
     if (fd >= 0) {
-      watch_receiver(fd);
+      watch_mouse(fd, path, wired);
       close(fd);
       write_status(-1, "disconnected");
     }
@@ -61,36 +66,52 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-// Asks the receiver for the battery level; -1 if it has none to report.
-int query_battery(int fd) {
+// Asks for the battery level (get-info) and writes it if there is one.
+void report_battery(int fd) {
   uint8_t req[AJZ_REPORT_LEN], reply[AJZ_REPORT_LEN];
   struct ajz_info info;
+  int bat;
 
   ajz_build(req, AJZ_CMD_INFO, 0, 0, NULL, 0);
   if (ajz_transact(fd, req, reply) != 0 || ajz_parse_info(reply, &info) != 0)
-    return -1;
-  return ajz_info_battery(&info);
+    return;
+  bat = ajz_info_battery(&info);
+  if (bat >= 0)
+    write_status(bat, info.charging ? "charging" : "mouse");
 }
 
-// Reads the battery once, then listens to the status frames the mouse pushes
-// until the receiver goes away. The kernel driver stays bound throughout.
-void watch_receiver(int fd) {
+// Reads the battery, then listens to the status frames the mouse pushes until
+// its node goes away. While wired the battery is re-read every CHECK_SECONDS,
+// and a cable being plugged in or pulled makes us switch nodes. The kernel
+// driver stays bound throughout.
+void watch_mouse(int fd, const char *path, int wired) {
   uint8_t frame[64];
   int online, bat;
+  time_t next_check = time(NULL) + CHECK_SECONDS;
 
-  bat = query_battery(fd);
-  if (bat >= 0)
-    write_status(bat, "mouse");
+  report_battery(fd);
 
   while (running) {
     struct pollfd p = {.fd = fd, .events = POLLIN};
-    int r = poll(&p, 1, 5000);
+    int r = poll(&p, 1, 1000 * CHECK_SECONDS);
     ssize_t n;
 
     if (r < 0 && errno == EINTR)
       continue;
     if (r < 0 || (p.revents & (POLLERR | POLLHUP | POLLNVAL)))
       return;
+
+    if (time(NULL) >= next_check) {
+      char now[64];
+      int now_wired;
+
+      if (ajz_find_mouse("/sys", vendor_id, product_id, now, sizeof(now), &now_wired) != 0 ||
+          strcmp(now, path) != 0)
+        return;
+      if (wired)
+        report_battery(fd);
+      next_check = time(NULL) + CHECK_SECONDS;
+    }
     if (r == 0)
       continue;
 
@@ -109,11 +130,14 @@ void watch_receiver(int fd) {
 void write_status(int bat_level, const char *class_name) {
   FILE *f = fopen(OUTPUT_FILE, "w");
   if (f) {
+    int charging = strcmp(class_name, "charging") == 0;
+
     if (bat_level >= 0)
       fprintf(f,
-              "{\"text\": \"🖱️ %d%%\", \"tooltip\": \"Ajazz Mouse\", "
+              "{\"text\": \"🖱️ %s%d%%\", \"tooltip\": \"Ajazz Mouse%s\", "
               "\"class\": \"%s\"}\n",
-              bat_level, class_name);
+              charging ? "⚡" : "", bat_level, charging ? " (charging)" : "",
+              class_name);
     else
       fprintf(f, "{\"text\": \"🖱️ ...\", \"tooltip\": \"Sleeping\", \"class\": "
                  "\"disconnected\"}\n");

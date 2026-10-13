@@ -58,6 +58,48 @@ static void test_find_hidraw_picks_vendor_interface(void) {
   sh("rm -rf %s", root);
 }
 
+// Live 2026-10-13: the cable shows up as 248a:5c2e with the same vendor
+// interface 2 (hidraw8) while the receiver stays plugged in.
+static void add_fake_wired(const char *root) {
+  sh("d=%s/devices/usb3/3-2/3-2:1.2/0003:248A:5C2E.0009; mkdir -p $d && "
+     "echo HID_ID=0003:0000248A:00005C2E > $d/uevent && "
+     "mkdir %s/class/hidraw/hidraw8 && ln -s "
+     "../../../devices/usb3/3-2/3-2:1.2/0003:248A:5C2E.0009 "
+     "%s/class/hidraw/hidraw8/device",
+     root);
+}
+
+static void test_find_mouse_prefers_cable(void) {
+  char root[] = "/tmp/ajz-sysfs-XXXXXX";
+  char path[64] = "";
+  int wired = -1;
+
+  CHECK(mkdtemp(root) != NULL);
+  make_fake_sysfs(root);
+  add_fake_wired(root);
+
+  CHECK(ajz_find_mouse(root, 0x249a, 0x5c2f, path, sizeof(path), &wired) == 0);
+  CHECK(strcmp(path, "/dev/hidraw8") == 0);
+  CHECK(wired == 1);
+
+  sh("rm -rf %s", root);
+}
+
+static void test_find_mouse_falls_back_to_receiver(void) {
+  char root[] = "/tmp/ajz-sysfs-XXXXXX";
+  char path[64] = "";
+  int wired = -1;
+
+  CHECK(mkdtemp(root) != NULL);
+  make_fake_sysfs(root);
+
+  CHECK(ajz_find_mouse(root, 0x249a, 0x5c2f, path, sizeof(path), &wired) == 0);
+  CHECK(strcmp(path, "/dev/hidraw3") == 0);
+  CHECK(wired == 0);
+
+  sh("rm -rf %s", root);
+}
+
 static void test_find_hidraw_fails_for_absent_device(void) {
   char root[] = "/tmp/ajz-sysfs-XXXXXX";
   char path[64] = "";
@@ -175,6 +217,8 @@ static void test_transact_times_out_without_reply(void) {
 int main(void) {
   test_find_hidraw_picks_vendor_interface();
   test_find_hidraw_fails_for_absent_device();
+  test_find_mouse_prefers_cable();
+  test_find_mouse_falls_back_to_receiver();
   test_transact_skips_status_frames_until_reply();
   test_transact_times_out_without_reply();
   test_transact_ignores_sleep_frame();
