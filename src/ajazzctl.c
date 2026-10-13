@@ -134,6 +134,13 @@ static int read_sensor_id(int fd, uint8_t *sensor) {
 }
 
 static void load_buttons(uint8_t keys[6][3]);
+static void load_macros(char macros[6][512]);
+
+// Macro text is ajazzctl's own tokens; anything else (a hand-edited file) is left
+// out of the JSON rather than escaped.
+static int plain_macro(const char *s) {
+  return strspn(s, "abcdefghijklmnopqrstuvwxyz0123456789+: ") == strlen(s);
+}
 
 // A button's function name, for show.
 static const char *button_label(const uint8_t code[3], char *out, size_t size) {
@@ -147,7 +154,8 @@ static int cmd_show(int fd, int json) {
   uint8_t sensor, rate[AJZ_REPORT_LEN], stages[AJZ_REPORT_LEN], col[AJZ_REPORT_LEN],
       light[AJZ_REPORT_LEN], sens[AJZ_REPORT_LEN], power[AJZ_REPORT_LEN], fw[AJZ_REPORT_LEN];
   uint8_t keys[6][3];
-  char name[64];
+  char name[64], macros[6][512];
+  int first = 1;
   int index, count, dpi[6], have_fw;
   const char *mode;
 
@@ -159,6 +167,7 @@ static int cmd_show(int fd, int json) {
   have_fw = do_read(fd, 0x20, fw) == 0;
   mode = light[4] < 6 ? lights[light[4]] : "?";
   load_buttons(keys);
+  load_macros(macros);
   if (count > 6)
     count = 6;
 
@@ -183,7 +192,13 @@ static int cmd_show(int fd, int json) {
     printf("\"buttons\":[");
     for (int i = 0; i < 6; i++)
       printf("%s\"%s\"", i ? "," : "", button_label(keys[i], name, sizeof(name)));
-    printf("],");
+    printf("],\"macros\":{");
+    for (int i = 0; i < 6; i++)
+      if (macros[i][0] && plain_macro(macros[i])) {
+        printf("%s\"%d\":\"%s\"", first ? "" : ",", i + 1, macros[i]);
+        first = 0;
+      }
+    printf("},");
     if (have_fw)
       printf("\"receiver_fw\":\"%x.%02x\"}\n", fw[4], fw[5]);
     else
@@ -211,6 +226,9 @@ static int cmd_show(int fd, int json) {
   for (int i = 0; i < 6; i++)
     printf(" %s", button_label(keys[i], name, sizeof(name)));
   printf("  (as last set by ajazzctl)\n");
+  for (int i = 0; i < 6; i++)
+    if (macros[i][0])
+      printf("macro %d:      %s\n", i + 1, macros[i]);
   if (have_fw)
     printf("receiver fw:  %x.%02x\n", fw[4], fw[5]);
   return 0;
@@ -381,7 +399,7 @@ static const uint8_t factory_buttons[6][3] = {{0x10, 0x01, 0x00}, {0x10, 0x02, 0
                                               {0x10, 0x04, 0x00}, {0x10, 0x08, 0x00},
                                               {0x10, 0x10, 0x00}, {0x40, 0x01, 0x00}};
 
-static void buttons_file(char *path, size_t size) {
+static void config_file(char *path, size_t size, const char *name) {
   const char *xdg = getenv("XDG_CONFIG_HOME"), *home = getenv("HOME");
 
   if (xdg && *xdg)
@@ -389,7 +407,8 @@ static void buttons_file(char *path, size_t size) {
   else
     snprintf(path, size, "%s/.config/ajazzctl", home ? home : ".");
   mkdir(path, 0755);
-  strncat(path, "/buttons", size - strlen(path) - 1);
+  strncat(path, "/", size - strlen(path) - 1);
+  strncat(path, name, size - strlen(path) - 1);
 }
 
 static void load_buttons(uint8_t keys[6][3]) {
@@ -397,7 +416,7 @@ static void load_buttons(uint8_t keys[6][3]) {
   FILE *f;
 
   memcpy(keys, factory_buttons, sizeof(factory_buttons));
-  buttons_file(path, sizeof(path));
+  config_file(path, sizeof(path), "buttons");
   f = fopen(path, "r");
   if (!f)
     return;
@@ -406,6 +425,44 @@ static void load_buttons(uint8_t keys[6][3]) {
       memcpy(keys, factory_buttons, sizeof(factory_buttons));
       break;
     }
+  fclose(f);
+}
+
+// Macro text per button as last uploaded ("ctrl+c wait:50 ctrl+v"); the mouse cannot
+// report its macros, so show reads them from here.
+static void load_macros(char macros[6][512]) {
+  char path[512], line[512], *text;
+  FILE *f;
+  long n;
+
+  memset(macros, 0, 6 * sizeof(macros[0]));
+  config_file(path, sizeof(path), "macros");
+  f = fopen(path, "r");
+  if (!f)
+    return;
+  while (fgets(line, sizeof(line), f)) {
+    n = strtol(line, &text, 10);
+    if (n < 1 || n > 6 || *text != ' ')
+      continue;
+    text[strcspn(text, "\n")] = '\0';
+    snprintf(macros[n - 1], sizeof(macros[0]), "%s", text + 1);
+  }
+  fclose(f);
+}
+
+static void save_macro(int n, const char *text) {
+  char macros[6][512], path[512];
+  FILE *f;
+
+  load_macros(macros);
+  snprintf(macros[n - 1], sizeof(macros[0]), "%s", text);
+  config_file(path, sizeof(path), "macros");
+  f = fopen(path, "w");
+  if (!f)
+    return;
+  for (int i = 0; i < 6; i++)
+    if (macros[i][0])
+      fprintf(f, "%d %s\n", i + 1, macros[i]);
   fclose(f);
 }
 
@@ -418,7 +475,7 @@ static int write_buttons(int fd, const uint8_t keys[6][3]) {
   if (exchange(fd, req, reply) != 0)
     return 1;
 
-  buttons_file(path, sizeof(path));
+  config_file(path, sizeof(path), "buttons");
   f = fopen(path, "w");
   if (f) {
     for (int i = 0; i < 6; i++)
@@ -477,7 +534,11 @@ static int cmd_macro(int fd, int argc, char *argv[]) {
 
   load_buttons(keys);
   ajz_macro_button(n - 1, keys[n - 1]);
-  return write_buttons(fd, keys);
+  if (write_buttons(fd, keys) != 0)
+    return 1;
+  text[strlen(text) - 1] = '\0'; // drop the trailing space
+  save_macro(n, text);
+  return 0;
 }
 
 static int usage(void) {
