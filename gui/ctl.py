@@ -42,27 +42,40 @@ def dpi_commands(old, new):
 
 
 class Ctl(QObject):
-    """Runs ajazzctl commands one after another without blocking the window
-    (ajazzctl waits for a sleeping mouse to wake)."""
+    """Runs ajazzctl jobs without blocking the window (ajazzctl waits for a sleeping
+    mouse). Pages share one Ctl, so jobs run one at a time and never talk to the
+    mouse at once; each result names the page that asked."""
 
-    done = pyqtSignal(bool, str)  # ok, stdout of the last command or the error line
+    done = pyqtSignal(object, bool, str)  # owner, ok, last stdout or the error line
 
     def __init__(self):
         super().__init__()
-        self.queue = []
+        self.jobs, self.queue, self.owner, self.active = [], [], None, False
         self.proc = QProcess(self)
         self.proc.finished.connect(self._finished)
         self.proc.errorOccurred.connect(self._error)
 
-    def run(self, commands):
-        self.queue = list(commands)
+    def run(self, commands, owner=None):
+        self.jobs.append((owner, list(commands)))
+        if not self.active:
+            self._start()
+
+    def _start(self):
+        self.active = True
+        self.owner, self.queue = self.jobs.pop(0)
         self._next("")
 
     def _next(self, out):
         if not self.queue:
-            self.done.emit(True, out)
+            self._finish(True, out)
             return
         self.proc.start(os.environ.get("AJAZZCTL", "ajazzctl"), self.queue.pop(0))
+
+    def _finish(self, ok, text):
+        self.active = False
+        self.done.emit(self.owner, ok, text)
+        if self.jobs and not self.active:  # a handler may already have started one
+            self._start()
 
     def _finished(self, code, status):
         out = bytes(self.proc.readAllStandardOutput()).decode()
@@ -70,10 +83,8 @@ class Ctl(QObject):
             self._next(out)
             return
         err = bytes(self.proc.readAllStandardError()).decode().strip().splitlines()
-        self.queue = []
-        self.done.emit(False, err[-1] if err else f"ajazzctl failed ({code})")
+        self._finish(False, err[-1] if err else f"ajazzctl failed ({code})")
 
     def _error(self, error):
         if error == QProcess.ProcessError.FailedToStart:
-            self.queue = []
-            self.done.emit(False, "ajazzctl not found - install aj179-linux")
+            self._finish(False, "ajazzctl not found - install aj179-linux")

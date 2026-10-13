@@ -36,24 +36,35 @@ def test_commands_write_values_then_colours_then_select():
 
 def run(ctl, commands):
     spy = QSignalSpy(ctl.done)
-    ctl.run(commands)
+    ctl.run(commands, "page")
     assert spy.wait(5000)
     return list(spy[0])
 
 
 def test_ctl_runs_commands_in_order_and_returns_last_output(app, fake_ctl):
-    assert run(Ctl(), [["dpi", "2", "900"], ["show", "--json"]]) == [True, SHOW]
+    assert run(Ctl(), [["dpi", "2", "900"], ["show", "--json"]]) == ["page", True, SHOW]
     assert fake_ctl.calls() == ["dpi 2 900", "show --json"]
 
 
 def test_ctl_stops_at_the_first_failure(app, fake_ctl, monkeypatch):
     monkeypatch.setenv("FAKE_FAIL", "dpi 2 900")
     assert run(Ctl(), [["dpi", "2", "900"], ["show", "--json"]]) == [
-        False, "mouse is asleep - move it"]
+        "page", False, "mouse is asleep - move it"]
     assert fake_ctl.calls() == ["dpi 2 900"]
 
 
 def test_ctl_reports_a_missing_ajazzctl(app, tmp_path, monkeypatch):
     monkeypatch.setenv("AJAZZCTL", str(tmp_path / "missing"))
     assert run(Ctl(), [["show", "--json"]]) == [
-        False, "ajazzctl not found - install aj179-linux"]
+        "page", False, "ajazzctl not found - install aj179-linux"]
+
+
+def test_ctl_runs_jobs_one_at_a_time_and_names_who_asked(app, fake_ctl):
+    ctl = Ctl()
+    spy = QSignalSpy(ctl.done)
+    ctl.run([["dpi", "2", "900"]], "dpi page")
+    ctl.run([["show", "--json"]], "settings page")  # queued, not started alongside
+    while len(spy) < 2:
+        assert spy.wait(5000)
+    assert [spy[i][0] for i in range(2)] == ["dpi page", "settings page"]
+    assert fake_ctl.calls() == ["dpi 2 900", "show --json"]

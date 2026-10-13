@@ -149,7 +149,8 @@ class MainWindow(QWidget):
 
         self.pages = QStackedWidget()
         self.pages.addWidget(self._home_page())
-        self.dpi = DpiPage(Ctl())
+        self.ctl = Ctl()  # shared: one ajazzctl job at a time
+        self.dpi = DpiPage(self.ctl)
         self.pages.addWidget(self.dpi)
 
         title = QLabel("AJ179")

@@ -1,11 +1,11 @@
-"""DPI page: one row per stage, written with ajazzctl when Apply is pressed."""
+"""DPI page: one row per stage."""
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import (QAbstractSpinBox, QButtonGroup, QColorDialog, QFrame, QGridLayout, QHBoxLayout,
-                             QLabel, QPushButton, QRadioButton, QSlider, QSpinBox,
-                             QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (QAbstractSpinBox, QButtonGroup, QColorDialog, QFrame,
+                             QGridLayout, QLabel, QPushButton, QRadioButton, QSlider, QSpinBox)
 
 from ctl import Dpi, dpi_commands, parse_dpi
+from page import DevicePage
 
 MIN_DPI, MAX_DPI, STEP = 50, 26000, 50  # PAW3395
 
@@ -48,16 +48,11 @@ class StageRow:
             self.on_change()
 
 
-class DpiPage(QWidget):
+class DpiPage(DevicePage):
     def __init__(self, ctl):
-        super().__init__()
-        self.ctl, self.dpi, self.busy, self.saving = ctl, None, False, False
+        super().__init__(ctl, "DPI",
+                         "Choose the active stage and set each stage's DPI and LED colour.")
         self.rows = []
-        ctl.done.connect(self._done)
-
-        heading = QLabel("DPI")
-        heading.setObjectName("heading")
-        hint = QLabel("Choose the active stage and set each stage's DPI and LED colour.")
         card = QFrame()
         card.setObjectName("card")
         self.grid = QGridLayout(card)
@@ -69,42 +64,19 @@ class DpiPage(QWidget):
             caption.setObjectName("caption")
             self.grid.addWidget(caption, 0, col)
         self.group = QButtonGroup(self)
+        self.body.addWidget(card)
 
-        self.message = QLabel()
-        self.message.setWordWrap(True)
-        self.reload_button = QPushButton("Reload")
-        self.reload_button.clicked.connect(self.load)
-        self.apply_button = QPushButton("Apply")
-        self.apply_button.setEnabled(False)
-        self.apply_button.clicked.connect(self.apply)
-        buttons = QHBoxLayout()
-        buttons.addWidget(self.message, 1)
-        buttons.addWidget(self.reload_button)
-        buttons.addWidget(self.apply_button)
+    def parse(self, text):
+        return parse_dpi(text)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(heading)
-        layout.addWidget(hint)
-        layout.addSpacing(10)
-        layout.addWidget(card)
-        layout.addLayout(buttons)
-        layout.addStretch()
-
-    def load(self):
-        self._start("Reading the mouse…", saving=False)
-        self.ctl.run([["show", "--json"]])
-
-    def apply(self):
-        commands = dpi_commands(self.dpi, self.current())
-        self._start("Saving…", saving=True)
-        self.ctl.run(commands + [["show", "--json"]])  # re-read what the mouse kept
+    def commands(self, old, new):
+        return dpi_commands(old, new)
 
     def current(self):
         return Dpi(self.group.checkedId(), tuple(r.spin.value() for r in self.rows),
                    tuple(r.colour for r in self.rows))
 
-    def show_dpi(self, dpi):
+    def show_value(self, dpi):
         if not self.rows:
             for n in range(1, len(dpi.stages) + 1):
                 row = StageRow(n, self._changed)
@@ -112,30 +84,7 @@ class DpiPage(QWidget):
                 for col, w in enumerate((row.radio, row.swatch, row.slider, row.spin)):
                     self.grid.addWidget(w, n, col)
                 self.rows.append(row)
-        self.dpi = dpi
         for row, value, colour in zip(self.rows, dpi.stages, dpi.colours):
             row.spin.setValue(value)
             row.set_colour(colour)
         self.rows[dpi.active - 1].radio.setChecked(True)
-        self._changed()
-
-    def _start(self, text, saving):
-        self.busy, self.saving = True, saving
-        self.message.setText(text)
-        self.apply_button.setEnabled(False)
-        self.reload_button.setEnabled(False)
-
-    def _done(self, ok, out):
-        self.busy = False
-        self.reload_button.setEnabled(True)
-        dpi = parse_dpi(out) if ok else None
-        if dpi is None:  # keep the user's edits so Apply can be retried
-            self.message.setText(out if not ok else "ajazzctl gave an unexpected reply")
-            self._changed()
-            return
-        self.show_dpi(dpi)
-        self.message.setText("Saved" if self.saving else "")
-
-    def _changed(self):
-        self.apply_button.setEnabled(
-            not self.busy and self.dpi is not None and self.current() != self.dpi)
