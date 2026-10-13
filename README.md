@@ -61,7 +61,7 @@ fetches the rest. For another Ajazz mouse, give its receiver IDs:
 
 ### Arch Linux (AUR)
 ```bash
-yay -S aj179-linux-battery-git   # the AUR package keeps its original name
+yay -S aj179-linux-git   # formerly aj179-linux-battery-git
 ```
 
 ### From a clone
