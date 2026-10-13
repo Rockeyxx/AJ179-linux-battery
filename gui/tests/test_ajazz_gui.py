@@ -3,6 +3,7 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
+from PyQt6.QtTest import QSignalSpy
 from PyQt6.QtWidgets import QApplication
 
 from ajazz_gui import MainWindow, Status, parse_status, read_status
@@ -60,3 +61,20 @@ def test_window_shows_battery_and_keeps_last_good_state(app, tmp_path):
     f.write_text("")  # caught mid-write by the daemon
     win.refresh()
     assert win.battery.value() == 89
+
+
+def test_sidebar_lists_every_feature_with_only_home_and_dpi_ready(app, tmp_path):
+    win = MainWindow(tmp_path / "none")
+    assert [b.text() for b in win.tabs] == [
+        "Home", "DPI", "Buttons", "Lighting", "Macro", "Settings"]
+    assert [b.isEnabled() for b in win.tabs] == [True, True, False, False, False, False]
+    assert win.tabs[0].isChecked()
+
+
+def test_choosing_dpi_shows_and_loads_the_dpi_page(app, tmp_path, fake_ctl):
+    win = MainWindow(tmp_path / "none")
+    spy = QSignalSpy(win.dpi.ctl.done)
+    win.tabs[1].click()
+    assert win.pages.currentWidget() is win.dpi
+    assert spy.wait(5000)
+    assert len(win.dpi.rows) == 6

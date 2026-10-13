@@ -1,7 +1,7 @@
 """DPI page: one row per stage, written with ajazzctl when Apply is pressed."""
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import (QButtonGroup, QColorDialog, QFrame, QGridLayout, QHBoxLayout,
+from PyQt6.QtWidgets import (QAbstractSpinBox, QButtonGroup, QColorDialog, QFrame, QGridLayout, QHBoxLayout,
                              QLabel, QPushButton, QRadioButton, QSlider, QSpinBox,
                              QVBoxLayout, QWidget)
 
@@ -27,6 +27,7 @@ class StageRow:
         self.spin.setRange(MIN_DPI, MAX_DPI)
         self.spin.setSingleStep(STEP)
         self.spin.setKeyboardTracking(False)  # only commit typed values on Enter
+        self.spin.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)  # arrows/wheel still step
         self.spin.setAccessibleName(f"Stage {n} DPI")
 
         self.slider.valueChanged.connect(lambda v: self.spin.setValue(v * STEP))

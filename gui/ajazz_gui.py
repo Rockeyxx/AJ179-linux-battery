@@ -12,16 +12,14 @@ from pathlib import Path
 from PyQt6.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt6.QtGui import (QColor, QKeySequence, QLinearGradient, QPainter, QPen,
                          QPolygonF, QShortcut)
-from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QLayout,
-                             QProgressBar, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (QApplication, QButtonGroup, QFrame, QHBoxLayout, QLabel,
+                             QProgressBar, QPushButton, QStackedWidget, QVBoxLayout, QWidget)
+
+from ctl import Ctl
+from dpi_page import DpiPage
+from theme import BLACK, BLUE, STYLE
 
 STATUS_FILE = Path("/tmp/ajazz_battery")
-
-BLACK = "#1e1e1e"
-CARD = "#2c2f35"
-RED = "#e8383d"   # AJAZZ logo
-BLUE = "#49ffe5"  # battery fill in the driver's skin
-GREY = "#b0b0b0"
 
 STATE_TEXT = {
     "mouse": "On battery",
@@ -30,15 +28,7 @@ STATE_TEXT = {
     "no-service": "Battery service not running",
 }
 
-STYLE = f"""
-QWidget#root {{ background: {BLACK}; }}
-QLabel {{ color: {GREY}; font-family: "Open Sans"; font-size: 10pt; }}
-QLabel#title {{ color: {RED}; font-size: 15pt; font-weight: 600; }}
-QFrame#accent {{ background: {RED}; }}
-QFrame#card {{ background: {CARD}; border-radius: 8px; }}
-QLabel#caption {{ font-size: 8pt; font-weight: 600; }}
-QLabel#percent {{ color: #ffffff; font-size: 32pt; font-weight: 600; }}
-"""
+FEATURES = ("Home", "DPI", "Buttons", "Lighting", "Macro", "Settings")
 
 
 @dataclass(frozen=True)
@@ -146,27 +136,81 @@ class BatteryBar(QProgressBar):
 
 
 class MainWindow(QWidget):
+    """The driver's layout: a sidebar with every feature, one page per feature."""
+
     def __init__(self, path=STATUS_FILE):
         super().__init__()
         self.path = path
-        self.setWindowTitle("AJ179 Battery")
+        self.setWindowTitle("AJ179")
         self.setObjectName("root")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.setStyleSheet(STYLE)
+        self.setFixedSize(860, 540)  # a fixed size makes tiling compositors float it
+
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self._home_page())
+        self.dpi = DpiPage(Ctl())
+        self.pages.addWidget(self.dpi)
 
         title = QLabel("AJ179")
         title.setObjectName("title")
         accent = QFrame()
         accent.setObjectName("accent")
         accent.setFixedSize(40, 3)
+        brand = QVBoxLayout()
+        brand.setContentsMargins(24, 0, 24, 24)
+        brand.setSpacing(6)
+        brand.addWidget(title)
+        brand.addWidget(accent)
 
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(190)
+        side = QVBoxLayout(sidebar)
+        side.setContentsMargins(0, 20, 0, 20)
+        side.setSpacing(0)
+        side.addLayout(brand)
+        self.tabs = []
+        group = QButtonGroup(self)
+        for i, name in enumerate(FEATURES):
+            tab = QPushButton(name)
+            tab.setObjectName("tab")
+            tab.setCheckable(True)
+            if i >= self.pages.count():
+                tab.setEnabled(False)
+                tab.setToolTip("Coming soon")
+                tab.setAccessibleDescription("Coming soon")
+            group.addButton(tab, i)
+            side.addWidget(tab)
+            self.tabs.append(tab)
+        side.addStretch()
+        group.idClicked.connect(self._show_page)
+        self.tabs[0].setChecked(True)
+
+        content = QVBoxLayout()
+        content.setContentsMargins(32, 28, 32, 28)
+        content.addWidget(self.pages)
+        root = QHBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(sidebar)
+        root.addLayout(content, 1)
+
+        QShortcut(QKeySequence.StandardKey.Quit, self, activated=self.close)
+        self.timer = QTimer(self, interval=2000, timeout=self.refresh)
+        self.timer.start()
+        self.refresh()
+
+    def _home_page(self):
+        heading = QLabel("Battery")
+        heading.setObjectName("heading")
         self.battery = BatteryBar()
         caption = QLabel("BATTERY")
         caption.setObjectName("caption")
         self.percent = QLabel()
         self.percent.setObjectName("percent")
         self.status = QLabel()
-        self.status.ensurePolished()  # reserve the longest text so the window never jumps
+        self.status.ensurePolished()  # reserve the longest text so the card never jumps
         self.status.setMinimumWidth(self.status.fontMetrics().horizontalAdvance(
             max(STATE_TEXT.values(), key=len)))
 
@@ -184,20 +228,23 @@ class MainWindow(QWidget):
         row.setSpacing(28)
         row.addWidget(self.battery)
         row.addLayout(text)
+        row.addStretch()
 
-        root = QVBoxLayout(self)
-        root.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)  # tilers float it
-        root.setContentsMargins(24, 20, 24, 24)
-        root.setSpacing(6)
-        root.addWidget(title)
-        root.addWidget(accent)
-        root.addSpacing(14)
-        root.addWidget(card)
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(heading)
+        layout.addSpacing(10)
+        layout.addWidget(card)
+        layout.addStretch()
+        return page
 
-        QShortcut(QKeySequence.StandardKey.Quit, self, activated=self.close)
-        self.timer = QTimer(self, interval=2000, timeout=self.refresh)
-        self.timer.start()
-        self.refresh()
+    def _show_page(self, i):
+        self.pages.setCurrentIndex(i)
+        # Read the mouse when DPI opens, unless that would throw away unsaved edits.
+        if i == self.pages.indexOf(self.dpi) and not self.dpi.busy \
+                and not self.dpi.apply_button.isEnabled():
+            self.dpi.load()
 
     def refresh(self):
         status = read_status(self.path)
