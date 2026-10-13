@@ -133,47 +133,63 @@ static int read_sensor_id(int fd, uint8_t *sensor) {
   return 0;
 }
 
-static int cmd_show(int fd) {
+// Prints every readable setting, as text or (json) as one JSON line for the GUI.
+static int cmd_show(int fd, int json) {
   static const char *lights[] = {"off", "flowing", "breathing", "constant", "neon", "wave"};
-  uint8_t r[AJZ_REPORT_LEN], sensor;
-  int index, count, dpi[6];
+  uint8_t sensor, rate[AJZ_REPORT_LEN], stages[AJZ_REPORT_LEN], col[AJZ_REPORT_LEN],
+      light[AJZ_REPORT_LEN], sens[AJZ_REPORT_LEN], power[AJZ_REPORT_LEN], fw[AJZ_REPORT_LEN];
+  int index, count, dpi[6], have_fw;
+  const char *mode;
 
-  if (read_sensor_id(fd, &sensor) != 0 || do_read(fd, 0x12, r) != 0)
+  if (read_sensor_id(fd, &sensor) != 0 || do_read(fd, 0x12, rate) != 0 ||
+      do_read(fd, 0x13, stages) != 0 || ajz_parse_dpi(stages, sensor, &index, &count, dpi) != 0 ||
+      do_read(fd, 0x14, col) != 0 || do_read(fd, 0x15, light) != 0 ||
+      do_read(fd, 0x16, sens) != 0 || do_read(fd, 0x17, power) != 0)
     return 1;
-  printf("report rate:  %d Hz\n", ajz_rate_hz(r[4]));
+  have_fw = do_read(fd, 0x20, fw) == 0;
+  mode = light[4] < 6 ? lights[light[4]] : "?";
+  if (count > 6)
+    count = 6;
 
-  if (do_read(fd, 0x13, r) != 0 || ajz_parse_dpi(r, sensor, &index, &count, dpi) != 0)
-    return 1;
+  if (json) {
+    printf("{\"rate\":%d,\"dpi\":{\"active\":%d,\"stages\":[", ajz_rate_hz(rate[4]), index + 1);
+    for (int i = 0; i < count; i++)
+      printf("%s%d", i ? "," : "", dpi[i]);
+    printf("],\"colours\":[");
+    for (int i = 0; i < 6; i++)
+      printf("%s\"#%02x%02x%02x\"", i ? "," : "", col[4 + 3 * i], col[5 + 3 * i], col[6 + 3 * i]);
+    printf("]},\"lighting\":{\"mode\":\"%s\",\"brightness\":%d,\"speed\":%d},", mode,
+           light[5] >> 4, light[5] & 0x0f);
+    printf("\"lod\":%d,\"motion_sync\":%s,\"angle_snap\":%s,", sens[4],
+           sens[5] ? "true" : "false", sens[6] ? "true" : "false");
+    printf("\"power\":{\"sleep\":%d,\"wake_on_move\":%d,\"lights_off_on_move\":%d,"
+           "\"debounce\":%d},",
+           power[4], power[5], power[6], power[7]);
+    if (have_fw)
+      printf("\"receiver_fw\":\"%x.%02x\"}\n", fw[4], fw[5]);
+    else
+      printf("\"receiver_fw\":null}\n");
+    return 0;
+  }
+
+  printf("report rate:  %d Hz\n", ajz_rate_hz(rate[4]));
   printf("dpi stages:  ");
-  for (int i = 0; i < count && i < 6; i++)
+  for (int i = 0; i < count; i++)
     printf(" %s%d", i == index ? "*" : "", dpi[i]);
   printf("\n");
-
-  if (do_read(fd, 0x14, r) != 0)
-    return 1;
   printf("dpi colours: ");
   for (int i = 0; i < 6; i++)
-    printf(" #%02x%02x%02x", r[4 + 3 * i], r[5 + 3 * i], r[6 + 3 * i]);
+    printf(" #%02x%02x%02x", col[4 + 3 * i], col[5 + 3 * i], col[6 + 3 * i]);
   printf("\n");
-
-  if (do_read(fd, 0x15, r) != 0)
-    return 1;
-  printf("lighting:     %s, brightness %d, speed %d\n", r[4] < 6 ? lights[r[4]] : "?",
-         r[5] >> 4, r[5] & 0x0f);
-
-  if (do_read(fd, 0x16, r) != 0)
-    return 1;
-  printf("lift-off:     %s\n", r[4] == 1 ? "low (1 mm)" : r[4] == 2 ? "high (2 mm)" : "?");
-  printf("motion sync:  %s\n", r[5] ? "on" : "off");
-  printf("angle snap:   %s\n", r[6] ? "on" : "off");
-
-  if (do_read(fd, 0x17, r) != 0)
-    return 1;
+  printf("lighting:     %s, brightness %d, speed %d\n", mode, light[5] >> 4, light[5] & 0x0f);
+  printf("lift-off:     %s\n",
+         sens[4] == 1 ? "low (1 mm)" : sens[4] == 2 ? "high (2 mm)" : "?");
+  printf("motion sync:  %s\n", sens[5] ? "on" : "off");
+  printf("angle snap:   %s\n", sens[6] ? "on" : "off");
   printf("power (raw):  sleep %d, wake-on-move %d, lights-off-on-move %d, debounce %d\n",
-         r[4], r[5], r[6], r[7]);
-
-  if (do_read(fd, 0x20, r) == 0)
-    printf("receiver fw:  %x.%02x\n", r[4], r[5]);
+         power[4], power[5], power[6], power[7]);
+  if (have_fw)
+    printf("receiver fw:  %x.%02x\n", fw[4], fw[5]);
   return 0;
 }
 
@@ -439,7 +455,7 @@ static int cmd_macro(int fd, int argc, char *argv[]) {
 
 static int usage(void) {
   fprintf(stderr,
-          "usage: ajazzctl info | show\n"
+          "usage: ajazzctl info | show [--json]\n"
           "       ajazzctl rate 125|250|500|1000\n"
           "       ajazzctl dpi <stage> <value> | dpi select <stage>\n"
           "       ajazzctl lighting off|breathing|constant [#RRGGBB] [brightness speed]\n"
@@ -461,6 +477,7 @@ int main(int argc, char *argv[]) {
   int fd, ret;
 
   if (!((argc == 2 && (strcmp(c, "info") == 0 || strcmp(c, "show") == 0)) ||
+        (argc == 3 && strcmp(c, "show") == 0 && strcmp(argv[2], "--json") == 0) ||
         (argc == 3 && (strcmp(c, "read") == 0 || strcmp(c, "rate") == 0 ||
                        (strcmp(c, "buttons") == 0 && strcmp(argv[2], "reset") == 0))) ||
         (argc == 4 && strcmp(c, "button") == 0) ||
@@ -477,7 +494,7 @@ int main(int argc, char *argv[]) {
   if (strcmp(c, "info") == 0)
     ret = cmd_info(fd);
   else if (strcmp(c, "show") == 0)
-    ret = cmd_show(fd);
+    ret = cmd_show(fd, argc == 3);
   else if (strcmp(c, "read") == 0)
     ret = cmd_read(fd, argv[2]);
   else if (strcmp(c, "rate") == 0)
