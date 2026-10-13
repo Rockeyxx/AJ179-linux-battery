@@ -24,14 +24,16 @@ install: $(TARGET) $(CTL)
 	install -D -m 755 $(CTL) $(DESTDIR)$(BINDIR)/$(CTL)
 	install -D -m 644 packaging/ajazz-mouse.service $(DESTDIR)$(SYSTEMD_DIR)/ajazz-mouse.service
 	install -D -m 644 packaging/ajazz-battery.conf $(DESTDIR)$(SYSCONFDIR)/conf.d/ajazz-battery
-	install -D -m 644 packaging/99-ajazz.rules $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules
+	install -D -m 644 packaging/70-ajazz.rules $(DESTDIR)$(UDEV_DIR)/70-ajazz.rules
+	# uaccess tags only work before 73-seat-late.rules; drop the old name
+	rm -f $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
 	rm -f $(DESTDIR)$(BINDIR)/$(CTL)
 	rm -f $(DESTDIR)$(SYSTEMD_DIR)/ajazz-mouse.service
 	rm -f $(DESTDIR)$(SYSCONFDIR)/conf.d/ajazz-battery
-	rm -f $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules
+	rm -f $(DESTDIR)$(UDEV_DIR)/70-ajazz.rules $(DESTDIR)$(UDEV_DIR)/99-ajazz.rules
 
 test: tests/test_protocol tests/test_hidraw
 	./tests/test_protocol
